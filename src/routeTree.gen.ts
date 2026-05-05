@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardTreeRouteImport } from './routes/dashboard.tree'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
 import { Route as DashboardMembersRouteImport } from './routes/dashboard.members'
@@ -40,6 +41,11 @@ const IndexRoute = IndexRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardTreeRoute = DashboardTreeRouteImport.update({
+  id: '/tree',
+  path: '/tree',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
@@ -138,6 +147,7 @@ export interface FileRouteTypes {
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
+    | '/dashboard/tree'
     | '/dashboard/'
     | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/poll'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
+    | '/dashboard/tree'
     | '/dashboard'
     | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/poll'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
+    | '/dashboard/tree'
     | '/dashboard/'
     | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/poll'
@@ -208,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/tree': {
+      id: '/dashboard/tree'
+      path: '/tree'
+      fullPath: '/dashboard/tree'
+      preLoaderRoute: typeof DashboardTreeRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/settings': {
@@ -275,6 +294,7 @@ interface DashboardRouteChildren {
   DashboardMembersRoute: typeof DashboardMembersRoute
   DashboardRequestsRoute: typeof DashboardRequestsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardTreeRoute: typeof DashboardTreeRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
@@ -284,6 +304,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardMembersRoute: DashboardMembersRoute,
   DashboardRequestsRoute: DashboardRequestsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardTreeRoute: DashboardTreeRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 
