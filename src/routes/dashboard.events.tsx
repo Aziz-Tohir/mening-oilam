@@ -26,10 +26,10 @@ function EventsPage() {
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  const { data: evRes, refetch: refetchEvents } = useCachedServer<{ events: any[] }>(
+  const { data: evRes, refetch: refetchEvents, ts: evTs, stale: evStale, loading: evLoading } = useCachedServer<{ events: any[] }>(
     `events:${familyId}`, listEvents, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
-  const { data: bdRes } = useCachedServer<{ items: any[] }>(
+  const { data: bdRes, ts: bdTs, stale: bdStale, loading: bdLoading } = useCachedServer<{ items: any[] }>(
     `bdays:${familyId}`, upcomingBirthdays, { familyId, days: 60 }, { enabled: !!familyId, staleMs: 60_000 },
   );
   const events = evRes?.events ?? [];
