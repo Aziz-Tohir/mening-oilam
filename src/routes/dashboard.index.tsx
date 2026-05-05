@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { listMyFamilies, createFamily, getFamilyStats } from "@/server/families.functions";
 import { listEvents, upcomingBirthdays } from "@/server/events.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 
@@ -18,42 +18,52 @@ export const Route = createFileRoute("/dashboard/")({
 
 function DashboardHome() {
   const { isAdmin } = useUserRole();
-  const [families, setFamilies] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<Record<string, any>>({});
-  const [events, setEvents] = useState<any[]>([]);
-  const [bdays, setBdays] = useState<any[]>([]);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", telegram_group_id: "", my_telegram_id: "", my_full_name: "" });
+  const { data: famRes, loading: famLoading, refetch: refetchFams } =
+    useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+  const families = famRes?.families ?? [];
+  const familyIds = families.map((f: any) => f.id).join(",");
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await callServer(listMyFamilies);
-      setFamilies(res.families);
-      const all: Record<string, any> = {};
+  const { data: aggregated, loading: aggLoading, refetch: refetchAgg } = useCachedServer<{
+    stats: Record<string, any>; events: any[]; bdays: any[];
+  }>(
+    `dashboard:agg:${familyIds}`,
+    async () => {
+      const stats: Record<string, any> = {};
       const allEvents: any[] = [];
       const allBdays: any[] = [];
-      for (const f of res.families) {
-        try { all[f.id] = await callServer(getFamilyStats, { familyId: f.id }); } catch {}
+      await Promise.all(families.map(async (f: any) => {
+        try { stats[f.id] = await callServer(getFamilyStats, { familyId: f.id }); } catch {}
         try {
-          const er = await callServer(listEvents, { familyId: f.id });
+          const er: any = await callServer(listEvents, { familyId: f.id });
           allEvents.push(...er.events.map((e: any) => ({ ...e, _family: f.name })));
         } catch {}
         try {
-          const br = await callServer(upcomingBirthdays, { familyId: f.id, days: 60 });
+          const br: any = await callServer(upcomingBirthdays, { familyId: f.id, days: 60 });
           allBdays.push(...br.items.map((b: any) => ({ ...b, _family: f.name })));
         } catch {}
-      }
-      setStats(all);
-      const now = Date.now();
-      setEvents(allEvents.filter(e => new Date(e.event_at).getTime() >= now - 86400000).sort((a,b) => +new Date(a.event_at) - +new Date(b.event_at)).slice(0, 8));
-      setBdays(allBdays.sort((a,b) => a.days_until - b.days_until).slice(0, 8));
-    } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
-    setLoading(false);
-  };
+      }));
+      return { stats, events: allEvents, bdays: allBdays };
+    },
+    undefined,
+    { enabled: families.length > 0, staleMs: 60_000 },
+  );
 
-  useEffect(() => { load(); }, []);
+  const stats = aggregated?.stats ?? {};
+  const events = useMemo(() => {
+    const now = Date.now();
+    return (aggregated?.events ?? [])
+      .filter((e: any) => new Date(e.event_at).getTime() >= now - 86400000)
+      .sort((a: any, b: any) => +new Date(a.event_at) - +new Date(b.event_at))
+      .slice(0, 8);
+  }, [aggregated]);
+  const bdays = useMemo(() =>
+    (aggregated?.bdays ?? []).sort((a: any, b: any) => a.days_until - b.days_until).slice(0, 8),
+    [aggregated]);
+
+  const loading = famLoading || (families.length > 0 && aggLoading && !aggregated);
+
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", telegram_group_id: "", my_telegram_id: "", my_full_name: "" });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,9 +77,13 @@ function DashboardHome() {
       toast.success("Oila yaratildi");
       setOpen(false);
       setForm({ name: "", telegram_group_id: "", my_telegram_id: "", my_full_name: "" });
-      load();
+      invalidateCache("families:");
+      invalidateCache("dashboard:");
+      refetchFams();
+      refetchAgg();
     } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
+
 
   return (
     <div className="space-y-6">
