@@ -175,19 +175,44 @@ function ProfilePage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
-              <div className="flex items-center gap-3">
-                {form.photo_url ? (
-                  <img src={form.photo_url} alt="" className="h-16 w-16 rounded-full object-cover" />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold">
-                    {(form.full_name || "?").split(" ").map((s) => s[0]).slice(0, 2).join("")}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  {form.photo_url ? (
+                    <img src={form.photo_url} alt="" className="h-20 w-20 rounded-full object-cover border border-border" />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-lg font-semibold">
+                      {(form.full_name || "?").split(" ").map((s) => s[0]).slice(0, 2).join("")}
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-wrap gap-2">
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+                    />
+                    <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                      {uploading ? "Yuklanmoqda…" : "Rasm yuklash"}
+                    </Button>
+                    {m.telegram_id && (
+                      <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={importTg}>
+                        Telegram rasmini olish
+                      </Button>
+                    )}
+                    {form.photo_url && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setForm({ ...form, photo_url: "" })}>
+                        O'chirish
+                      </Button>
+                    )}
                   </div>
-                )}
-                <div className="flex-1">
-                  <Label>Foto URL</Label>
-                  <Input value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="https://…" />
                 </div>
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer">Yoki rasmni URL orqali kiriting</summary>
+                  <Input className="mt-2" value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="https://…" />
+                </details>
               </div>
+
 
               <div className="flex items-center justify-between rounded border border-border p-3">
                 <div>
