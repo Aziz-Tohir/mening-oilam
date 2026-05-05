@@ -90,3 +90,11 @@ export async function getUpdates(offset: number, timeout = 25, allowedUpdates: s
 export async function forwardMessage(chatId: number | string, fromChatId: number | string, messageId: number) {
   return tgCall("forwardMessage", { chat_id: chatId, from_chat_id: fromChatId, message_id: messageId });
 }
+
+export async function restrictChatMember(chatId: number | string, userId: number, untilDate?: number) {
+  return tgCall("restrictChatMember", {
+    chat_id: chatId, user_id: userId,
+    permissions: { can_send_messages: false, can_send_media_messages: false, can_send_polls: false, can_send_other_messages: false, can_add_web_page_previews: false },
+    until_date: untilDate,
+  });
+}
