@@ -85,9 +85,22 @@ function DashboardHome() {
   };
 
 
+  const handleRefresh = () => {
+    invalidateCache("families:");
+    invalidateCache("dashboard:");
+    refetchFams();
+    refetchAgg();
+    toast.success("Yangilandi");
+  };
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Bosh sahifa</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Bosh sahifa</h1>
+        <Button size="sm" variant="outline" onClick={handleRefresh} disabled={loading}>
+          {loading ? "Yangilanmoqda…" : "↻ Yangilash"}
+        </Button>
+      </div>
 
       {/* TOP: Upcoming events */}
       <Card>
