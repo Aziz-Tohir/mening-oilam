@@ -41,10 +41,10 @@ function SettingsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Sozlamalar</h1>
         <Select value={familyId} onValueChange={setFamilyId}>
-          <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
