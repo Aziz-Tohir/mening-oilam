@@ -129,6 +129,33 @@ async function handleMessage(msg: TgMessage) {
   await handleRelativeInput(userId, msg);
 }
 
+// ---------- /start welcome message ----------
+async function sendWelcome(userId: number) {
+  const text = [
+    "👋 <b>Assalomu alaykum!</b>",
+    "",
+    "Men — <b>Shajara boti</b>man. Oilangizning shajarasini yuritish, qarindoshlik aloqalarini saqlash va guruhni boshqarishda yordam beraman.",
+    "",
+    "<b>📋 Buyruqlar:</b>",
+    "• /start — oilaga qo'shilish so'rovini yuborish",
+    "• /kim — kim kimga kim? (qarindoshlik kalkulyatori)",
+    "• /help yoki /info — shu yordam xabari",
+    "",
+    "<b>✨ Nimalar qila olaman:</b>",
+    "👨‍👩‍👧‍👦 <b>Oila daraxti</b> — barcha a'zolarni saqlash, ko'rish va eksport qilish (PNG/PDF)",
+    "🔗 <b>Qarindoshlik</b> — istalgan ikki kishi orasidagi aloqa (masalan: amaki, jiyan, kuyov…)",
+    "🎉 <b>Tadbirlar</b> — tug'ilgan kun, to'y, yubileylar uchun avtomatik eslatma",
+    "📨 <b>So'rovlar</b> — yangi a'zolar admin tasdig'idan o'tadi",
+    "🛡 <b>Guruh moderatsiyasi</b> — havola/forward/flud bloki, taqiqlangan so'zlar, ogohlantirish va kick/ban/mute",
+    "📢 <b>E'lonlar</b> — adminlardan butun guruhga yoki shaxsan xabar",
+    "",
+    "<b>🌐 Mini App:</b> pastdagi menyu tugmasi <b>«Shajara»</b> ni bossangiz, to'liq admin panel Telegram ichida ochiladi.",
+    "",
+    "Boshlash uchun /start bosing yoki menyudan «Shajara» ni oching.",
+  ].join("\n");
+  await sendMessage(userId, text, { parse_mode: "HTML" });
+}
+
 // ---------- /start onboarding step 1 ----------
 async function sendStartFlow(userId: number, from: TgUser) {
   const db = getAdminDb();
