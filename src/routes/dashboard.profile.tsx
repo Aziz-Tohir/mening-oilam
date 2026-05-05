@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { getMyMemberships, updateMyProfile, importTelegramPhoto } from "@/server/profile.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { useRef } from "react";
+
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
