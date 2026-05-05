@@ -8,6 +8,7 @@ import {
   banChatMember,
 } from "./telegram.server";
 import { RELATIONSHIP_OPTIONS, relationshipLabel } from "@/lib/relationships";
+import { calculateKinship, type EdgeRow } from "@/lib/kinship";
 
 type TgUser = { id: number; is_bot?: boolean; username?: string; first_name?: string; last_name?: string };
 type TgChat = { id: number; type: string; title?: string; username?: string };
