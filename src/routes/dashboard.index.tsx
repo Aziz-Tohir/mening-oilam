@@ -19,7 +19,7 @@ export const Route = createFileRoute("/dashboard/")({
 
 function DashboardHome() {
   const { isAdmin } = useUserRole();
-  const { data: famRes, loading: famLoading, refetch: refetchFams } =
+  const { data: famRes, loading: famLoading, refetch: refetchFams, ts: famTs, stale: famStale } =
     useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
   const families = famRes?.families ?? [];
   const familyIds = families.map((f: any) => f.id).join(",");
