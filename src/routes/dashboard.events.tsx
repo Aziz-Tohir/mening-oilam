@@ -82,16 +82,16 @@ function EventsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Tadbirlar va tug'ilgan kunlar</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Select value={familyId} onValueChange={setFamilyId}>
-            <SelectTrigger className="w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
             <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
           </Select>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button disabled={!familyId}>+ Yangi tadbir</Button></DialogTrigger>
-            <DialogContent>
+            <DialogTrigger asChild><Button disabled={!familyId} className="w-full sm:w-auto">+ Yangi tadbir</Button></DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Yangi tadbir</DialogTitle></DialogHeader>
               <form onSubmit={submit} className="space-y-3">
                 <div><Label>Sarlavha *</Label><Input required value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="Nikoh to'yi" /></div>
