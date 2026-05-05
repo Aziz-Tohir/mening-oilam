@@ -67,8 +67,8 @@ function MembersPage() {
                       try {
                         await callServer(updateMember, { familyId, memberId: m.id, patch: { birth_date: v } });
                         toast.success("Saqlandi");
-                        const r = await callServer(listMembers, { familyId });
-                        setMembers(r.members);
+                        invalidateCache(`members:${familyId}`);
+                        refetch();
                       } catch (err: any) { toast.error(err?.message ?? "Saqlab bo'lmadi"); }
                     }} />
                 </td>
