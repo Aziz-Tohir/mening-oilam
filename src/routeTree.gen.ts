@@ -19,6 +19,7 @@ import { Route as DashboardRequestsRouteImport } from './routes/dashboard.reques
 import { Route as DashboardMembersRouteImport } from './routes/dashboard.members'
 import { Route as DashboardKinshipRouteImport } from './routes/dashboard.kinship'
 import { Route as DashboardEventsRouteImport } from './routes/dashboard.events'
+import { Route as DashboardBotRouteImport } from './routes/dashboard.bot'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/telegram/poll'
 import { Route as ApiPublicCronDailyRemindersRouteImport } from './routes/api/public/cron/daily-reminders'
@@ -73,6 +74,11 @@ const DashboardEventsRoute = DashboardEventsRouteImport.update({
   path: '/events',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardBotRoute = DashboardBotRouteImport.update({
+  id: '/bot',
+  path: '/bot',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ApiPublicTelegramWebhookRoute =
   ApiPublicTelegramWebhookRouteImport.update({
     id: '/api/public/telegram/webhook',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/dashboard/bot': typeof DashboardBotRoute
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/dashboard/bot': typeof DashboardBotRoute
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/dashboard/bot': typeof DashboardBotRoute
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/dashboard/bot'
     | '/dashboard/events'
     | '/dashboard/kinship'
     | '/dashboard/members'
@@ -156,6 +166,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/dashboard/bot'
     | '/dashboard/events'
     | '/dashboard/kinship'
     | '/dashboard/members'
@@ -171,6 +182,7 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/dashboard/bot'
     | '/dashboard/events'
     | '/dashboard/kinship'
     | '/dashboard/members'
@@ -264,6 +276,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardEventsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/bot': {
+      id: '/dashboard/bot'
+      path: '/bot'
+      fullPath: '/dashboard/bot'
+      preLoaderRoute: typeof DashboardBotRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/api/public/telegram/webhook': {
       id: '/api/public/telegram/webhook'
       path: '/api/public/telegram/webhook'
@@ -289,6 +308,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface DashboardRouteChildren {
+  DashboardBotRoute: typeof DashboardBotRoute
   DashboardEventsRoute: typeof DashboardEventsRoute
   DashboardKinshipRoute: typeof DashboardKinshipRoute
   DashboardMembersRoute: typeof DashboardMembersRoute
@@ -299,6 +319,7 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardBotRoute: DashboardBotRoute,
   DashboardEventsRoute: DashboardEventsRoute,
   DashboardKinshipRoute: DashboardKinshipRoute,
   DashboardMembersRoute: DashboardMembersRoute,
