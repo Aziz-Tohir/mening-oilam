@@ -28,7 +28,7 @@ function EventsPage() {
   const { data: evRes, refetch: refetchEvents } = useCachedServer<{ events: any[] }>(
     `events:${familyId}`, listEvents, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
-  const { data: bdRes, refetch: refetchBdays } = useCachedServer<{ items: any[] }>(
+  const { data: bdRes } = useCachedServer<{ items: any[] }>(
     `bdays:${familyId}`, upcomingBirthdays, { familyId, days: 60 }, { enabled: !!familyId, staleMs: 60_000 },
   );
   const events = evRes?.events ?? [];
