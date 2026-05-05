@@ -61,7 +61,7 @@ export const Route = createFileRoute("/api/public/telegram/miniapp-auth")({
           }, { status: 403 });
         }
 
-        if (member.status !== "approved") {
+        if (member.status !== "active") {
           return Response.json({
             error: "pending",
             message: "So'rovingiz hali admin tasdig'ini kutmoqda.",

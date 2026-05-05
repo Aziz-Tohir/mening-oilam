@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate, Link, Outlet } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardLayout,
@@ -10,12 +12,49 @@ export const Route = createFileRoute("/dashboard")({
 function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const [tgAuthing, setTgAuthing] = useState(false);
+
+  // Telegram Mini App auto-login
+  useEffect(() => {
+    if (loading || user || tgAuthing) return;
+    const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
+    const initData = tg?.initData;
+    if (!initData) return;
+    setTgAuthing(true);
+    tg.ready?.();
+    tg.expand?.();
+    (async () => {
+      try {
+        const res = await fetch("/api/public/telegram/miniapp-auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.message ?? json?.error ?? "Login xatosi");
+        const { error } = await supabase.auth.verifyOtp({
+          type: "magiclink",
+          token_hash: json.token_hash,
+        });
+        if (error) throw error;
+      } catch (e: any) {
+        toast.error(e?.message ?? "Telegram orqali kirish amalga oshmadi");
+        navigate({ to: "/login" });
+      } finally {
+        setTgAuthing(false);
+      }
+    })();
+  }, [loading, user, tgAuthing, navigate]);
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login" });
-  }, [loading, user, navigate]);
+    if (loading || tgAuthing) return;
+    if (!user) {
+      const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
+      if (!tg?.initData) navigate({ to: "/login" });
+    }
+  }, [loading, user, tgAuthing, navigate]);
 
-  if (loading || !user) return <div className="p-8 text-muted-foreground">Yuklanmoqda…</div>;
+  if (loading || tgAuthing || !user) return <div className="p-8 text-muted-foreground">Yuklanmoqda…</div>;
 
   return (
     <div className="min-h-screen bg-muted/20">
