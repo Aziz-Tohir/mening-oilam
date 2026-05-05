@@ -1,0 +1,100 @@
+// Group message moderation logic
+import { getAdminDb } from "./db.server";
+import { deleteMessage, sendMessage, banChatMember, restrictChatMember } from "./telegram.server";
+
+const URL_REGEX = /(https?:\/\/[^\s]+|t\.me\/[^\s]+|@[A-Za-z0-9_]{4,})/i;
+
+type Msg = {
+  message_id: number;
+  from?: { id: number; first_name?: string; username?: string };
+  chat: { id: number };
+  text?: string;
+  caption?: string;
+  forward_from?: any;
+  forward_from_chat?: any;
+  forward_origin?: any;
+};
+
+const lastMsgAt = new Map<string, number>();
+
+export async function moderateGroupMessage(msg: Msg, family: { id: string; telegram_group_id: number }) {
+  const db = getAdminDb();
+  const userId = msg.from?.id;
+  if (!userId) return false;
+
+  const { data: settings } = await db.from("family_settings").select("*").eq("family_id", family.id).maybeSingle();
+  if (!settings) return false;
+
+  const text = (msg.text ?? msg.caption ?? "").toString();
+  let violation: string | null = null;
+  let action: "delete" | "warn" | "kick" = "delete";
+
+  if (settings.anti_forward && (msg.forward_from || msg.forward_from_chat || msg.forward_origin)) {
+    violation = "Forward xabarlar taqiqlangan"; action = "delete";
+  }
+  if (!violation && settings.anti_link && URL_REGEX.test(text)) {
+    const allowed: string[] = settings.allowed_link_domains ?? [];
+    const ok = allowed.some(d => text.toLowerCase().includes(d.toLowerCase()));
+    if (!ok) { violation = "Havolalar taqiqlangan"; action = "warn"; }
+  }
+  if (!violation && settings.anti_flood_seconds > 0) {
+    const key = `${msg.chat.id}:${userId}`;
+    const now = Date.now();
+    const last = lastMsgAt.get(key) ?? 0;
+    if (now - last < settings.anti_flood_seconds * 1000) {
+      violation = "Tez-tez yozyapsiz (flood)"; action = "delete";
+    }
+    lastMsgAt.set(key, now);
+  }
+  if (!violation && text) {
+    const { data: words } = await db.from("banned_words").select("*").eq("family_id", family.id);
+    for (const w of words ?? []) {
+      try {
+        const re = w.is_regex ? new RegExp(w.pattern, "i") : new RegExp(escapeRegex(w.pattern), "i");
+        if (re.test(text)) {
+          violation = `Taqiqlangan so'z: ${w.pattern}`;
+          action = (w.action ?? "delete") as any;
+          break;
+        }
+      } catch {}
+    }
+  }
+
+  if (!violation) return false;
+
+  await deleteMessage(msg.chat.id, msg.message_id);
+
+  if (action === "warn" || action === "kick") {
+    const { data: member } = await db.from("family_members")
+      .select("id, full_name").eq("family_id", family.id).eq("telegram_id", userId).maybeSingle();
+    if (member) {
+      await db.from("member_warnings").insert({
+        family_id: family.id, member_id: member.id, telegram_id: userId, reason: violation, auto: true,
+      });
+      const { count } = await db.from("member_warnings").select("*", { count: "exact", head: true })
+        .eq("family_id", family.id).eq("member_id", member.id);
+      const total = count ?? 1;
+      const max = settings.max_warnings ?? 3;
+      const name = msg.from?.first_name ?? member.full_name;
+      if (total >= max) {
+        const act = settings.warning_action ?? "kick";
+        try {
+          if (act === "ban") await banChatMember(msg.chat.id, userId);
+          else if (act === "mute") await restrictChatMember(msg.chat.id, userId, Math.floor(Date.now()/1000) + 3600);
+          else await banChatMember(msg.chat.id, userId);
+        } catch (e) { console.warn("[mod] action failed", e); }
+        await sendMessage(msg.chat.id, `🚫 ${name} ${max} ta ogohlantirish oldi va guruhdan chiqarildi.`);
+      } else {
+        await sendMessage(msg.chat.id, `⚠️ ${name}, ${violation}. (${total}/${max})`);
+      }
+    }
+  }
+
+  await db.from("action_logs").insert({
+    family_id: family.id, actor_telegram_id: userId,
+    action: "auto_moderation", details: { reason: violation, action, chat_id: msg.chat.id },
+  });
+  return true;
+}
+
+function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
