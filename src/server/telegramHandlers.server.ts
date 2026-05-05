@@ -110,7 +110,12 @@ async function handleMessage(msg: TgMessage) {
   }
 
   if (text === "/help") {
-    await sendMessage(userId, "Shajara botiga xush kelibsiz! Oilaga qo'shilish uchun /start ni bosing.");
+    await sendMessage(userId, "Buyruqlar:\n/start — oilaga qo'shilish\n/kim — kim kimga kim? kalkulyatori");
+    return;
+  }
+
+  if (text.startsWith("/kim")) {
+    await startKinshipFlow(userId);
     return;
   }
 
