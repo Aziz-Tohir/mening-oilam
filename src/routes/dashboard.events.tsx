@@ -31,19 +31,22 @@ function EventsPage() {
   });
 
   useEffect(() => {
-    callServer(listMyFamilies).then(r => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
+    callServer(listMyFamilies)
+      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
 
   const reload = async (fid: string) => {
-    const [e, b] = await Promise.all([
-      callServer(listEvents, { familyId: fid }),
-      callServer(upcomingBirthdays, { familyId: fid, days: 60 }),
-    ]);
-    setEvents(e.events);
-    setBdays(b.items);
+    try {
+      const [e, b] = await Promise.all([
+        callServer(listEvents, { familyId: fid }),
+        callServer(upcomingBirthdays, { familyId: fid, days: 60 }),
+      ]);
+      setEvents(e.events);
+      setBdays(b.items);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Tadbirlarni yuklab bo'lmadi");
+    }
   };
 
   useEffect(() => { if (familyId) reload(familyId); }, [familyId]);
