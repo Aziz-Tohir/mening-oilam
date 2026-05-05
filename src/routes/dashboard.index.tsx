@@ -105,7 +105,7 @@ function DashboardHome() {
           <p>2. <a className="underline" href="https://t.me/userinfobot" target="_blank">@userinfobot</a> orqali o'z Telegram ID'ngizni va guruh ID'ni oling.</p>
           <p>3. Yuqoridagi tugma orqali oila yarating.</p>
           <p>4. Telegram webhook avtomatik ulangan — botga yozilgan har bir xabar darhol qayta ishlanadi.</p>
-          <p>5. <b>Tug'ilgan kun va tadbir eslatmalari</b> uchun har kuni ertalab (masalan, 08:00) <a className="underline" href="https://cron-job.org" target="_blank" rel="noreferrer">cron-job.org</a>'da quyidagi URL'ni chaqiring:<br/><code className="break-all">https://project--858ca73f-22bf-4369-b9d0-1671ce37994d.lovable.app/api/public/cron/daily-reminders?secret=YOUR_CRON_SECRET</code></p>
+          <p>5. <b>Tug'ilgan kun va tadbir eslatmalari</b> uchun har kuni ertalab (masalan, 08:00) <a className="underline" href="https://cron-job.org" target="_blank" rel="noreferrer">cron-job.org</a>'da quyidagi URL'ni chaqiring:<br/><code className="break-all text-xs">https://project--858ca73f-22bf-4369-b9d0-1671ce37994d.lovable.app/api/public/cron/daily-reminders?secret=YOUR_CRON_SECRET</code></p>
         </CardContent>
       </Card>
     </div>
