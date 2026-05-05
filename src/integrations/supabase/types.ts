@@ -138,6 +138,86 @@ export type Database = {
           },
         ]
       }
+      event_rsvps: {
+        Row: {
+          event_id: string
+          family_id: string
+          id: string
+          member_id: string
+          responded_at: string
+          status: Database["public"]["Enums"]["rsvp_status"]
+        }
+        Insert: {
+          event_id: string
+          family_id: string
+          id?: string
+          member_id: string
+          responded_at?: string
+          status: Database["public"]["Enums"]["rsvp_status"]
+        }
+        Update: {
+          event_id?: string
+          family_id?: string
+          id?: string
+          member_id?: string
+          responded_at?: string
+          status?: Database["public"]["Enums"]["rsvp_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_rsvps_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          event_at: string
+          family_id: string
+          id: string
+          is_recurring_yearly: boolean
+          location: string | null
+          notify_days_before: number[]
+          notify_group: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_at: string
+          family_id: string
+          id?: string
+          is_recurring_yearly?: boolean
+          location?: string | null
+          notify_days_before?: number[]
+          notify_group?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          event_at?: string
+          family_id?: string
+          id?: string
+          is_recurring_yearly?: boolean
+          location?: string | null
+          notify_days_before?: number[]
+          notify_group?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       families: {
         Row: {
           created_at: string
@@ -389,6 +469,33 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          family_id: string
+          id: number
+          kind: string
+          notify_date: string
+          ref_id: string
+          sent_at: string
+        }
+        Insert: {
+          family_id: string
+          id?: number
+          kind: string
+          notify_date: string
+          ref_id: string
+          sent_at?: string
+        }
+        Update: {
+          family_id?: string
+          id?: number
+          kind?: string
+          notify_date?: string
+          ref_id?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -619,6 +726,7 @@ export type Database = {
         | "nephew"
         | "niece"
         | "other"
+      rsvp_status: "yes" | "no" | "maybe"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -794,6 +902,7 @@ export const Constants = {
         "niece",
         "other",
       ],
+      rsvp_status: ["yes", "no", "maybe"],
     },
   },
 } as const
