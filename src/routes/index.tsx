@@ -47,7 +47,7 @@ function Index() {
           </div>
         </section>
 
-        <section id="features" className="mt-24 grid gap-6 md:grid-cols-3">
+        <section id="features" className="mt-16 grid gap-4 sm:mt-24 sm:gap-6 md:grid-cols-3">
           {[
             { icon: "🔐", title: "Xavfsiz onboarding", desc: "Yangi a'zo qarindoshi va admin tasdig'idan keyingina guruhga qo'shiladi." },
             { icon: "🌳", title: "Oila shajarasi", desc: "Har bir a'zo va ular orasidagi qarindoshlik aloqalari saqlanadi." },
