@@ -24,15 +24,16 @@ function KinshipPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    callServer(listMyFamilies).then(r => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
+    callServer(listMyFamilies)
+      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
 
   useEffect(() => {
     setResult(null); setFrom(""); setTo("");
-    if (familyId) callServer(listMembers, { familyId }).then(r => setMembers(r.members.filter((m: any) => m.status === "active")));
+    if (familyId) callServer(listMembers, { familyId })
+      .then(r => setMembers(r.members.filter((m: any) => m.status === "active")))
+      .catch((e: any) => toast.error(e?.message ?? "A'zolarni yuklab bo'lmadi"));
   }, [familyId]);
 
   const memberById = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members]);
