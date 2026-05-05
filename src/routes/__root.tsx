@@ -49,6 +49,9 @@ export const Route = createRootRoute({
         href: appCss,
       },
     ],
+    scripts: [
+      { src: "https://telegram.org/js/telegram-web-app.js" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
