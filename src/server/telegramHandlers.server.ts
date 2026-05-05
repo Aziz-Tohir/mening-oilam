@@ -76,11 +76,11 @@ async function handleMyChatMember(evt: any) {
 async function handleMessage(msg: TgMessage) {
   const db = getAdminDb();
 
-  // Group events: join/leave cleanup
+  // Group events
   if (msg.chat.type !== "private") {
     const { data: family } = await db
       .from("families")
-      .select("id")
+      .select("id, telegram_group_id")
       .eq("telegram_group_id", msg.chat.id)
       .maybeSingle();
 
@@ -95,8 +95,13 @@ async function handleMessage(msg: TgMessage) {
         await deleteMessage(msg.chat.id, msg.message_id);
         return;
       }
+
+      // Auto-moderation (anti-link, anti-forward, anti-flood, banned words)
+      const { moderateGroupMessage } = await import("./moderation.server");
+      const moderated = await moderateGroupMessage(msg as any, { id: family.id, telegram_group_id: family.telegram_group_id! });
+      if (moderated) return;
     }
-    return; // No other group handling in MVP
+    return;
   }
 
   // Private chat
