@@ -30,7 +30,7 @@ function DashboardHome() {
         try { all[f.id] = await callServer(getFamilyStats, { familyId: f.id }); } catch {}
       }
       setStats(all);
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
     setLoading(false);
   };
 
@@ -49,7 +49,7 @@ function DashboardHome() {
       setOpen(false);
       setForm({ name: "", telegram_group_id: "", my_telegram_id: "", my_full_name: "" });
       load();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
 
   return (

@@ -176,7 +176,7 @@ function TreePage() {
       toast.success("Aloqa qo'shildi");
       setPendingConn(null);
       reload();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
 
   const exportPng = async () => {
