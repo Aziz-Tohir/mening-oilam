@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
 import { listEvents, createEvent, deleteEvent, upcomingBirthdays } from "@/server/events.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/events")({
@@ -20,36 +20,25 @@ export const Route = createFileRoute("/dashboard/events")({
 });
 
 function EventsPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
-  const [events, setEvents] = useState<any[]>([]);
-  const [bdays, setBdays] = useState<any[]>([]);
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
+
+  const { data: evRes, refetch: refetchEvents } = useCachedServer<{ events: any[] }>(
+    `events:${familyId}`, listEvents, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+  );
+  const { data: bdRes, refetch: refetchBdays } = useCachedServer<{ items: any[] }>(
+    `bdays:${familyId}`, upcomingBirthdays, { familyId, days: 60 }, { enabled: !!familyId, staleMs: 60_000 },
+  );
+  const events = evRes?.events ?? [];
+  const bdays = bdRes?.items ?? [];
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     title: "", description: "", eventAt: "", location: "",
     isRecurringYearly: false, notifyGroup: true,
   });
-
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
-      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
-  }, []);
-
-  const reload = async (fid: string) => {
-    try {
-      const [e, b] = await Promise.all([
-        callServer(listEvents, { familyId: fid }),
-        callServer(upcomingBirthdays, { familyId: fid, days: 60 }),
-      ]);
-      setEvents(e.events);
-      setBdays(b.items);
-    } catch (err: any) {
-      toast.error(err?.message ?? "Tadbirlarni yuklab bo'lmadi");
-    }
-  };
-
-  useEffect(() => { if (familyId) reload(familyId); }, [familyId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +56,9 @@ function EventsPage() {
       toast.success("Tadbir qo'shildi");
       setOpen(false);
       setForm({ title: "", description: "", eventAt: "", location: "", isRecurringYearly: false, notifyGroup: true });
-      reload(familyId);
+      invalidateCache(`events:${familyId}`);
+      invalidateCache("dashboard:");
+      refetchEvents();
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -76,9 +67,12 @@ function EventsPage() {
     try {
       await callServer(deleteEvent, { familyId, id });
       toast.success("O'chirildi");
-      reload(familyId);
+      invalidateCache(`events:${familyId}`);
+      invalidateCache("dashboard:");
+      refetchEvents();
     } catch (e: any) { toast.error(e?.message ?? "O'chirib bo'lmadi"); }
   };
+
 
   return (
     <div className="space-y-8">
