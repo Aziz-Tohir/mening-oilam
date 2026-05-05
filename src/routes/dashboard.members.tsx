@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers, setMemberStatus, updateMember } from "@/server/admin.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { relationshipLabel } from "@/lib/relationships";
 import { toast } from "sonner";
 
@@ -16,34 +16,26 @@ export const Route = createFileRoute("/dashboard/members")({
 });
 
 function MembersPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
-  const [members, setMembers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); else setLoading(false); })
-      .catch((e: any) => { toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"); setLoading(false); });
-  }, []);
-  useEffect(() => {
-    if (!familyId) return;
-    setLoading(true);
-    callServer(listMembers, { familyId })
-      .then(r => setMembers(r.members))
-      .catch((e: any) => toast.error(e?.message ?? "A'zolarni yuklab bo'lmadi"))
-      .finally(() => setLoading(false));
-  }, [familyId]);
+  const { data: memRes, loading, refetch } = useCachedServer<{ members: any[] }>(
+    `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+  );
+  const members = memRes?.members ?? [];
 
   const toggleBlock = async (m: any) => {
     const next = m.status === "blocked" ? "active" : "blocked";
     try {
       await callServer(setMemberStatus, { familyId, memberId: m.id, status: next });
       toast.success("Yangilandi");
-      const r = await callServer(listMembers, { familyId });
-      setMembers(r.members);
+      invalidateCache(`members:${familyId}`);
+      refetch();
     } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
+
 
   return (
     <div>
