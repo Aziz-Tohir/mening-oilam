@@ -110,12 +110,13 @@ async function handleMessage(msg: TgMessage) {
   if (!userId) return;
 
   if (text.startsWith("/start")) {
+    await sendWelcome(userId);
     await sendStartFlow(userId, msg.from!);
     return;
   }
 
-  if (text === "/help") {
-    await sendMessage(userId, "Buyruqlar:\n/start — oilaga qo'shilish\n/kim — kim kimga kim? kalkulyatori");
+  if (text === "/help" || text === "/info") {
+    await sendWelcome(userId);
     return;
   }
 
