@@ -109,6 +109,22 @@ export const Route = createFileRoute("/api/public/telegram/miniapp-auth")({
           await db.from("family_members").update({ user_id: userId }).eq("id", member.id);
         }
 
+        // Ensure a 'member' role exists for this user in the family (idempotent).
+        // Admins are assigned manually — this never overwrites an existing higher role.
+        const { data: existingRole } = await db
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("family_id", member.family_id)
+          .maybeSingle();
+        if (!existingRole) {
+          await db.from("user_roles").insert({
+            user_id: userId,
+            family_id: member.family_id,
+            role: "member",
+          });
+        }
+
         // Generate a magiclink the client can verify to get a session
         const { data: link, error: linkErr } = await db.auth.admin.generateLink({
           type: "magiclink",
