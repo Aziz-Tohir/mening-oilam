@@ -229,10 +229,13 @@ async function handleRelativeInput(userId: number, msg: TgMessage) {
     `Salom! ${msg.from?.first_name ?? ""} (${msg.from?.username ? "@" + msg.from.username : "id" + userId}) sizni qarindoshim deb ko'rsatdi va oilaga qo'shilmoqchi.\n\nU sizga kim bo'ladi?`,
     {
       reply_markup: {
-        inline_keyboard: chunk(
-          RELATIONSHIP_OPTIONS.map(r => ({ text: r.label, callback_data: `rel:${req.id}:${r.value}` })),
-          2,
-        ).concat([[{ text: "❌ Tanimayman", callback_data: `relno:${req.id}` }]]),
+        inline_keyboard: [
+          ...chunk(
+            RELATIONSHIP_OPTIONS.map(r => ({ text: r.label as string, callback_data: `rel:${req.id}:${r.value}` })),
+            2,
+          ),
+          [{ text: "❌ Tanimayman", callback_data: `relno:${req.id}` }],
+        ],
       },
     },
   );
