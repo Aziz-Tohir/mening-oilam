@@ -454,3 +454,112 @@ async function editMessageTextSafe(chatId: number, messageId: number, text: stri
     console.warn("[bot] editMessageText failed", e);
   }
 }
+
+// ---------- /kim — kinship calculator ----------
+async function findUserFamilies(userTelegramId: number) {
+  const db = getAdminDb();
+  const { data: rows } = await db.from("family_members")
+    .select("family_id, families:family_id(id, name)")
+    .eq("telegram_id", userTelegramId)
+    .eq("status", "active");
+  return (rows ?? []).map((r: any) => r.families).filter(Boolean);
+}
+
+async function startKinshipFlow(userTelegramId: number) {
+  const fams = await findUserFamilies(userTelegramId);
+  if (fams.length === 0) {
+    await sendMessage(userTelegramId, "Siz hech qaysi oilada faol a'zo emassiz.");
+    return;
+  }
+  if (fams.length === 1) return askKimFirst(userTelegramId, fams[0].id);
+  await sendMessage(userTelegramId, "Qaysi oila bo'yicha?", {
+    reply_markup: { inline_keyboard: fams.map((f: any) => [{ text: f.name, callback_data: `kim:fam:${f.id}` }]) },
+  });
+}
+
+async function askKimFirst(chatId: number, familyId: string, page = 0) {
+  await askKimPick(chatId, familyId, page, "first", null);
+}
+
+async function askKimPick(chatId: number, familyId: string, page: number, step: "first" | "second", firstId: string | null) {
+  const db = getAdminDb();
+  const PAGE = 8;
+  const { data: members, count } = await db.from("family_members")
+    .select("id, full_name", { count: "exact" })
+    .eq("family_id", familyId)
+    .eq("status", "active")
+    .order("full_name")
+    .range(page * PAGE, page * PAGE + PAGE - 1);
+
+  const filtered = (members ?? []).filter(m => step === "first" || m.id !== firstId);
+  const rows = chunk(filtered.map(m => ({
+    text: m.full_name,
+    callback_data: step === "first"
+      ? `kim:p1:${familyId}:${m.id}`
+      : `kim:p2:${familyId}:${firstId}:${m.id}`,
+  })), 1);
+
+  const navRow: any[] = [];
+  if (page > 0) navRow.push({ text: "◀", callback_data: `kim:pg:${familyId}:${step}:${firstId ?? "_"}:${page - 1}` });
+  if ((count ?? 0) > (page + 1) * PAGE) navRow.push({ text: "▶", callback_data: `kim:pg:${familyId}:${step}:${firstId ?? "_"}:${page + 1}` });
+  if (navRow.length) rows.push(navRow);
+
+  await sendMessage(chatId, step === "first" ? "👤 Birinchi a'zoni tanlang:" : "👥 Ikkinchi a'zoni tanlang:", {
+    reply_markup: { inline_keyboard: rows },
+  });
+}
+
+async function handleKinshipCallback(cb: TgCallback, data: string) {
+  const parts = data.split(":");
+  const sub = parts[1];
+  const chatId = cb.from.id;
+
+  if (sub === "fam") {
+    await answerCallbackQuery(cb.id);
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    await askKimFirst(chatId, parts[2]);
+    return;
+  }
+  if (sub === "pg") {
+    const [, , familyId, step, firstId, pageStr] = parts;
+    await answerCallbackQuery(cb.id);
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    await askKimPick(chatId, familyId, Number(pageStr), step as "first" | "second", firstId === "_" ? null : firstId);
+    return;
+  }
+  if (sub === "p1") {
+    const [, , familyId, memberId] = parts;
+    await answerCallbackQuery(cb.id);
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    await askKimPick(chatId, familyId, 0, "second", memberId);
+    return;
+  }
+  if (sub === "p2") {
+    const [, , familyId, firstId, secondId] = parts;
+    await answerCallbackQuery(cb.id, "Hisoblanmoqda…");
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    await computeAndReplyKinship(chatId, familyId, firstId, secondId);
+    return;
+  }
+  await answerCallbackQuery(cb.id);
+}
+
+async function computeAndReplyKinship(chatId: number, familyId: string, fromId: string, toId: string) {
+  const db = getAdminDb();
+  const [{ data: edges }, { data: from }, { data: to }] = await Promise.all([
+    db.from("relationships").select("member_id_1, member_id_2, relationship_type").eq("family_id", familyId),
+    db.from("family_members").select("full_name").eq("id", fromId).maybeSingle(),
+    db.from("family_members").select("full_name").eq("id", toId).maybeSingle(),
+  ]);
+  if (!from || !to) {
+    await sendMessage(chatId, "A'zo topilmadi.");
+    return;
+  }
+  const result = calculateKinship((edges ?? []) as EdgeRow[], fromId, toId);
+  if (!result.found) {
+    await sendMessage(chatId, `❌ ${from.full_name} va ${to.full_name} orasida aloqa topilmadi.\n\nQarindoshlik aloqalarini admin panelida qo'shing.`);
+    return;
+  }
+  const chainTxt = result.chain.length > 1 ? `\n\nYo'l: ${result.chain.map(relationshipLabel).join(" → ")}` : "";
+  await sendMessage(chatId, `🌳 *${to.full_name}* — *${from.full_name}*ga *${result.label}* bo'ladi.${chainTxt}`, { parse_mode: "Markdown" });
+}
