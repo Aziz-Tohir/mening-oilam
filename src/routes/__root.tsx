@@ -30,14 +30,18 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Mening Oilam" },
+      { name: "description", content: "Create and manage Telegram bots with custom features and web interfaces." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Mening Oilam" },
+      { property: "og:description", content: "Create and manage Telegram bots with custom features and web interfaces." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Mening Oilam" },
+      { name: "twitter:description", content: "Create and manage Telegram bots with custom features and web interfaces." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/376b5e5e-3e7d-450f-9122-5de4681bc8f5/id-preview-003947ee--858ca73f-22bf-4369-b9d0-1671ce37994d.lovable.app-1777988893874.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/376b5e5e-3e7d-450f-9122-5de4681bc8f5/id-preview-003947ee--858ca73f-22bf-4369-b9d0-1671ce37994d.lovable.app-1777988893874.png" },
     ],
     links: [
       {
