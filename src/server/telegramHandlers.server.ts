@@ -261,6 +261,11 @@ async function handleCallback(cb: TgCallback) {
     return;
   }
 
+  if (data.startsWith("kim:")) {
+    await handleKinshipCallback(cb, data);
+    return;
+  }
+
   if (data.startsWith("rel:")) {
     const [, requestId, relType] = data.split(":");
     const { data: req } = await db.from("join_requests").select("*").eq("id", requestId).maybeSingle();
