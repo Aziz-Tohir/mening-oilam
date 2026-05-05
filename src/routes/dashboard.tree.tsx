@@ -97,20 +97,26 @@ function TreePage() {
   const flowWrap = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    callServer(listMyFamilies).then((r) => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
+    callServer(listMyFamilies)
+      .then((r) => {
+        setFamilies(r.families);
+        if (r.families[0]) setFamilyId(r.families[0].id);
+      })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
 
   const reload = useCallback(async () => {
     if (!familyId) return;
-    const [m, r] = await Promise.all([
-      callServer(listMembers, { familyId }),
-      callServer(listRelationships, { familyId }),
-    ]);
-    setMembers(m.members);
-    setRels(r.relationships);
+    try {
+      const [m, r] = await Promise.all([
+        callServer(listMembers, { familyId }),
+        callServer(listRelationships, { familyId }),
+      ]);
+      setMembers(m.members);
+      setRels(r.relationships);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Daraxtni yuklab bo'lmadi");
+    }
   }, [familyId]);
 
   useEffect(() => { reload(); }, [reload]);
