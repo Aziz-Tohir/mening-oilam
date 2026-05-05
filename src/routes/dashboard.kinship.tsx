@@ -44,7 +44,7 @@ function KinshipPage() {
     try {
       const res = await callServer(computeKinship, { familyId, fromMemberId: from, toMemberId: to });
       setResult(res);
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.message ?? "Hisoblab bo'lmadi"); }
     setLoading(false);
   };
 
