@@ -16,6 +16,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
 import { Route as DashboardMembersRouteImport } from './routes/dashboard.members'
+import { Route as DashboardKinshipRouteImport } from './routes/dashboard.kinship'
 import { Route as DashboardEventsRouteImport } from './routes/dashboard.events'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/telegram/poll'
@@ -56,6 +57,11 @@ const DashboardMembersRoute = DashboardMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardKinshipRoute = DashboardKinshipRouteImport.update({
+  id: '/kinship',
+  path: '/kinship',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardEventsRoute = DashboardEventsRouteImport.update({
   id: '/events',
   path: '/events',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/dashboard/events': typeof DashboardEventsRoute
+  '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/dashboard/events': typeof DashboardEventsRoute
+  '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/dashboard/events': typeof DashboardEventsRoute
+  '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/dashboard/events'
+    | '/dashboard/kinship'
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/dashboard/events'
+    | '/dashboard/kinship'
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/dashboard/events'
+    | '/dashboard/kinship'
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
@@ -219,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardMembersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/kinship': {
+      id: '/dashboard/kinship'
+      path: '/kinship'
+      fullPath: '/dashboard/kinship'
+      preLoaderRoute: typeof DashboardKinshipRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/events': {
       id: '/dashboard/events'
       path: '/events'
@@ -252,6 +271,7 @@ declare module '@tanstack/react-router' {
 
 interface DashboardRouteChildren {
   DashboardEventsRoute: typeof DashboardEventsRoute
+  DashboardKinshipRoute: typeof DashboardKinshipRoute
   DashboardMembersRoute: typeof DashboardMembersRoute
   DashboardRequestsRoute: typeof DashboardRequestsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
@@ -260,6 +280,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEventsRoute: DashboardEventsRoute,
+  DashboardKinshipRoute: DashboardKinshipRoute,
   DashboardMembersRoute: DashboardMembersRoute,
   DashboardRequestsRoute: DashboardRequestsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
