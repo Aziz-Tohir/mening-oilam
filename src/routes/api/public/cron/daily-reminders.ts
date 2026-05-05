@@ -89,28 +89,27 @@ async function processFamily(db: ReturnType<typeof getAdminDb>, family: any, tod
   }
 }
 
+async function handle(request: Request) {
+  const url = new URL(request.url);
+  const secret = url.searchParams.get("secret") ?? request.headers.get("x-cron-secret");
+  if (!secret || secret !== process.env.CRON_SECRET) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  const db = getAdminDb();
+  const { data: families } = await db.from("families").select("id, name, telegram_group_id");
+  const today = new Date();
+  let processed = 0;
+  for (const fam of families ?? []) {
+    try { await processFamily(db, fam, today); processed++; } catch (e) { console.error("family err", fam.id, e); }
+  }
+  return Response.json({ ok: true, families: processed });
+}
+
 export const Route = createFileRoute("/api/public/cron/daily-reminders")({
   server: {
     handlers: {
-      POST: async ({ request }) => {
-        const url = new URL(request.url);
-        const secret = url.searchParams.get("secret") ?? request.headers.get("x-cron-secret");
-        if (!secret || secret !== process.env.CRON_SECRET) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-        const db = getAdminDb();
-        const { data: families } = await db.from("families").select("id, name, telegram_group_id");
-        const today = new Date();
-        let processed = 0;
-        for (const fam of families ?? []) {
-          try { await processFamily(db, fam, today); processed++; } catch (e) { console.error("family err", fam.id, e); }
-        }
-        return Response.json({ ok: true, families: processed });
-      },
-      GET: async (ctx) => {
-        // Allow GET for easy cron-job.org configuration
-        return (Route.options.server!.handlers as any).POST(ctx);
-      },
+      POST: async ({ request }) => handle(request),
+      GET: async ({ request }) => handle(request),
     },
   },
 });
