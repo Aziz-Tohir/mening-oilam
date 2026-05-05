@@ -43,7 +43,7 @@ function DashboardHome() {
         } catch {}
       }));
       return { stats, events: allEvents, bdays: allBdays };
-    } as any,
+    },
     undefined,
     { enabled: families.length > 0, staleMs: 60_000 },
   );
