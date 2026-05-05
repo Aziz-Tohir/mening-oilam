@@ -20,13 +20,21 @@ function SettingsPage() {
   const [familyId, setFamilyId] = useState<string>("");
   const [settings, setSettings] = useState<any>(null);
 
-  useEffect(() => { callServer(listMyFamilies).then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); }); }, []);
-  useEffect(() => { if (familyId) callServer(getSettings, { familyId }).then(r => setSettings(r.settings)); }, [familyId]);
+  useEffect(() => {
+    callServer(listMyFamilies)
+      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
+  }, []);
+  useEffect(() => {
+    if (familyId) callServer(getSettings, { familyId })
+      .then(r => setSettings(r.settings))
+      .catch((e: any) => toast.error(e?.message ?? "Sozlamalarni yuklab bo'lmadi"));
+  }, [familyId]);
 
   const save = async (patch: any) => {
     setSettings({ ...settings, ...patch });
     try { await callServer(updateSettings, { familyId, patch }); toast.success("Saqlandi"); }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) { toast.error(e?.message ?? "Saqlab bo'lmadi"); }
   };
 
   if (!settings) return <p className="text-muted-foreground">Yuklanmoqda…</p>;
