@@ -76,12 +76,6 @@ function LoginPage() {
               </form>
             </TabsContent>
           </Tabs>
-          <div className="my-4 flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" /> yoki <div className="h-px flex-1 bg-border" />
-          </div>
-          <Button variant="outline" className="w-full" onClick={handleGoogle} disabled={loading}>
-            Google bilan kirish
-          </Button>
         </CardContent>
       </Card>
     </div>
