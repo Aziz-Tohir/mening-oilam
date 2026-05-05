@@ -550,6 +550,27 @@ export type Database = {
           },
         ]
       }
+      kinship_sessions: {
+        Row: {
+          family_id: string | null
+          first_member_id: string | null
+          updated_at: string
+          user_telegram_id: number
+        }
+        Insert: {
+          family_id?: string | null
+          first_member_id?: string | null
+          updated_at?: string
+          user_telegram_id: number
+        }
+        Update: {
+          family_id?: string | null
+          first_member_id?: string | null
+          updated_at?: string
+          user_telegram_id?: number
+        }
+        Relationships: []
+      }
       member_warnings: {
         Row: {
           auto: boolean

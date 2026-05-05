@@ -517,25 +517,41 @@ async function findUserFamilies(userTelegramId: number) {
   return (rows ?? []).map((r: any) => r.families).filter(Boolean);
 }
 
+async function setKimSession(userTgId: number, patch: { family_id?: string | null; first_member_id?: string | null }) {
+  const db = getAdminDb();
+  await db.from("kinship_sessions").upsert({
+    user_telegram_id: userTgId,
+    ...patch,
+    updated_at: new Date().toISOString(),
+  });
+}
+async function getKimSession(userTgId: number) {
+  const db = getAdminDb();
+  const { data } = await db.from("kinship_sessions").select("family_id, first_member_id").eq("user_telegram_id", userTgId).maybeSingle();
+  return data ?? { family_id: null, first_member_id: null };
+}
+
 async function startKinshipFlow(userTelegramId: number) {
   const fams = await findUserFamilies(userTelegramId);
   if (fams.length === 0) {
     await sendMessage(userTelegramId, "Siz hech qaysi oilada faol a'zo emassiz.");
     return;
   }
-  if (fams.length === 1) return askKimFirst(userTelegramId, fams[0].id);
+  await setKimSession(userTelegramId, { family_id: null, first_member_id: null });
+  if (fams.length === 1) {
+    await setKimSession(userTelegramId, { family_id: fams[0].id });
+    return askKimPick(userTelegramId, fams[0].id, 0, "first");
+  }
   await sendMessage(userTelegramId, "Qaysi oila bo'yicha?", {
-    reply_markup: { inline_keyboard: fams.map((f: any) => [{ text: f.name, callback_data: `kim:fam:${f.id}` }]) },
+    reply_markup: { inline_keyboard: fams.map((f: any) => [{ text: f.name, callback_data: `kim:f:${f.id}` }]) },
   });
 }
 
-async function askKimFirst(chatId: number, familyId: string, page = 0) {
-  await askKimPick(chatId, familyId, page, "first", null);
-}
-
-async function askKimPick(chatId: number, familyId: string, page: number, step: "first" | "second", firstId: string | null) {
+async function askKimPick(chatId: number, familyId: string, page: number, step: "first" | "second") {
   const db = getAdminDb();
   const PAGE = 8;
+  const session = await getKimSession(chatId);
+  const firstId = session.first_member_id;
   const { data: members, count } = await db.from("family_members")
     .select("id, full_name", { count: "exact" })
     .eq("family_id", familyId)
@@ -546,14 +562,13 @@ async function askKimPick(chatId: number, familyId: string, page: number, step: 
   const filtered = (members ?? []).filter(m => step === "first" || m.id !== firstId);
   const rows = chunk(filtered.map(m => ({
     text: m.full_name,
-    callback_data: step === "first"
-      ? `kim:p1:${familyId}:${m.id}`
-      : `kim:p2:${familyId}:${firstId}:${m.id}`,
+    callback_data: step === "first" ? `kim:1:${m.id}` : `kim:2:${m.id}`,
   })), 1);
 
   const navRow: any[] = [];
-  if (page > 0) navRow.push({ text: "◀", callback_data: `kim:pg:${familyId}:${step}:${firstId ?? "_"}:${page - 1}` });
-  if ((count ?? 0) > (page + 1) * PAGE) navRow.push({ text: "▶", callback_data: `kim:pg:${familyId}:${step}:${firstId ?? "_"}:${page + 1}` });
+  const stepCode = step === "first" ? "a" : "b";
+  if (page > 0) navRow.push({ text: "◀", callback_data: `kim:n:${stepCode}:${page - 1}` });
+  if ((count ?? 0) > (page + 1) * PAGE) navRow.push({ text: "▶", callback_data: `kim:n:${stepCode}:${page + 1}` });
   if (navRow.length) rows.push(navRow);
 
   await sendMessage(chatId, step === "first" ? "👤 Birinchi a'zoni tanlang:" : "👥 Ikkinchi a'zoni tanlang:", {
@@ -566,31 +581,41 @@ async function handleKinshipCallback(cb: TgCallback, data: string) {
   const sub = parts[1];
   const chatId = cb.from.id;
 
-  if (sub === "fam") {
+  if (sub === "f") {
+    const familyId = parts[2];
+    await setKimSession(chatId, { family_id: familyId, first_member_id: null });
     await answerCallbackQuery(cb.id);
     if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
-    await askKimFirst(chatId, parts[2]);
+    await askKimPick(chatId, familyId, 0, "first");
     return;
   }
-  if (sub === "pg") {
-    const [, , familyId, step, firstId, pageStr] = parts;
+  if (sub === "n") {
+    const stepCode = parts[2];
+    const page = Number(parts[3]);
+    const session = await getKimSession(chatId);
+    if (!session.family_id) { await answerCallbackQuery(cb.id, "Sessiya tugagan, /kim ni qayta yuboring"); return; }
     await answerCallbackQuery(cb.id);
     if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
-    await askKimPick(chatId, familyId, Number(pageStr), step as "first" | "second", firstId === "_" ? null : firstId);
+    await askKimPick(chatId, session.family_id, page, stepCode === "a" ? "first" : "second");
     return;
   }
-  if (sub === "p1") {
-    const [, , familyId, memberId] = parts;
+  if (sub === "1") {
+    const memberId = parts[2];
+    const session = await getKimSession(chatId);
+    if (!session.family_id) { await answerCallbackQuery(cb.id, "Sessiya tugagan, /kim ni qayta yuboring"); return; }
+    await setKimSession(chatId, { first_member_id: memberId });
     await answerCallbackQuery(cb.id);
     if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
-    await askKimPick(chatId, familyId, 0, "second", memberId);
+    await askKimPick(chatId, session.family_id, 0, "second");
     return;
   }
-  if (sub === "p2") {
-    const [, , familyId, firstId, secondId] = parts;
+  if (sub === "2") {
+    const secondId = parts[2];
+    const session = await getKimSession(chatId);
+    if (!session.family_id || !session.first_member_id) { await answerCallbackQuery(cb.id, "Sessiya tugagan, /kim ni qayta yuboring"); return; }
     await answerCallbackQuery(cb.id, "Hisoblanmoqda…");
     if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
-    await computeAndReplyKinship(chatId, familyId, firstId, secondId);
+    await computeAndReplyKinship(chatId, session.family_id, session.first_member_id, secondId);
     return;
   }
   await answerCallbackQuery(cb.id);
