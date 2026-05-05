@@ -22,7 +22,7 @@ function MembersPage() {
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  const { data: memRes, loading, refetch } = useCachedServer<{ members: any[] }>(
+  const { data: memRes, loading, refetch, ts: memTs, stale: memStale } = useCachedServer<{ members: any[] }>(
     `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
   const members = memRes?.members ?? [];
