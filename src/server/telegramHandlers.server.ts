@@ -160,6 +160,25 @@ async function sendWelcome(userId: number) {
 async function sendStartFlow(userId: number, from: TgUser) {
   const db = getAdminDb();
 
+  // Check if user is already an active member of any family
+  const { data: existingMemberships } = await db
+    .from("family_members")
+    .select("family_id, families:family_id(id, name)")
+    .eq("telegram_id", userId)
+    .eq("status", "active");
+
+  if (existingMemberships && existingMemberships.length > 0) {
+    const names = existingMemberships
+      .map((m: any) => m.families?.name)
+      .filter(Boolean)
+      .join(", ");
+    await sendMessage(
+      userId,
+      `✅ Siz allaqachon ${names || "oila"} a'zosisiz.\n\nMini App'ni ochish uchun pastdagi menyu tugmasini bosing yoki /kim buyrug'i orqali qarindoshlikni hisoblang.`,
+    );
+    return;
+  }
+
   // List active families. If only one — auto-pick it. If many — show keyboard.
   const { data: families } = await db.from("families").select("id, name, telegram_group_id").not("telegram_group_id", "is", null);
 
