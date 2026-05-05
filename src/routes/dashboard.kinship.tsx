@@ -50,10 +50,10 @@ function KinshipPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Kim kimga kim?</h1>
         <Select value={familyId} onValueChange={setFamilyId}>
-          <SelectTrigger className="w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
