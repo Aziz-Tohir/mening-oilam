@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers, listRelationships, addRelationship } from "@/server/admin.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/tree")({
