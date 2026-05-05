@@ -73,9 +73,11 @@ function EventsPage() {
 
   const remove = async (id: string) => {
     if (!confirm("Tadbirni o'chirasizmi?")) return;
-    await callServer(deleteEvent, { familyId, id });
-    toast.success("O'chirildi");
-    reload(familyId);
+    try {
+      await callServer(deleteEvent, { familyId, id });
+      toast.success("O'chirildi");
+      reload(familyId);
+    } catch (e: any) { toast.error(e?.message ?? "O'chirib bo'lmadi"); }
   };
 
   return (
