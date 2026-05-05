@@ -1,6 +1,7 @@
-import { createFileRoute, useNavigate, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,9 +10,13 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardLayout,
 });
 
+const ADMIN_ONLY_PATHS = ["/dashboard/members", "/dashboard/requests", "/dashboard/bot", "/dashboard/settings"];
+
 function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tgAuthing, setTgAuthing] = useState(false);
 
   // Telegram Mini App auto-login
@@ -54,26 +59,40 @@ function DashboardLayout() {
     }
   }, [loading, user, tgAuthing, navigate]);
 
+  // Redirect non-admins away from admin-only pages
+  useEffect(() => {
+    if (!user || roleLoading || isAdmin) return;
+    if (ADMIN_ONLY_PATHS.some(p => location.pathname.startsWith(p))) {
+      toast.error("Bu sahifa faqat adminlar uchun");
+      navigate({ to: "/dashboard/tree" });
+    }
+  }, [user, roleLoading, isAdmin, location.pathname, navigate]);
+
   if (loading || tgAuthing || !user) return <div className="p-8 text-muted-foreground">Yuklanmoqda…</div>;
+
+  const allTabs: Array<[string, string, boolean]> = [
+    ["/dashboard", "Bosh sahifa", false],
+    ["/dashboard/members", "A'zolar", true],
+    ["/dashboard/requests", "So'rovlar", true],
+    ["/dashboard/events", "Tadbirlar", false],
+    ["/dashboard/tree", "Daraxt", false],
+    ["/dashboard/kinship", "Kim kimga?", false],
+    ["/dashboard/bot", "Bot", true],
+    ["/dashboard/settings", "Sozlamalar", true],
+  ];
+  const tabs = allTabs.filter(([, , adminOnly]) => isAdmin || !adminOnly);
 
   return (
     <div className="min-h-screen bg-muted/20">
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3">
-          <Link to="/dashboard" className="flex shrink-0 items-center gap-2 text-sm font-semibold sm:text-base">🌳 Shajara</Link>
+          <Link to="/dashboard" className="flex shrink-0 items-center gap-2 text-sm font-semibold sm:text-base">
+            🌳 Shajara {!isAdmin && !roleLoading && <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">a'zo</span>}
+          </Link>
           <Button size="sm" variant="ghost" onClick={() => { signOut(); navigate({ to: "/" }); }}>Chiqish</Button>
         </div>
         <nav className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-2 pb-2 text-sm sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {[
-            ["/dashboard", "Bosh sahifa"],
-            ["/dashboard/members", "A'zolar"],
-            ["/dashboard/requests", "So'rovlar"],
-            ["/dashboard/events", "Tadbirlar"],
-            ["/dashboard/tree", "Daraxt"],
-            ["/dashboard/kinship", "Kim kimga?"],
-            ["/dashboard/bot", "Bot"],
-            ["/dashboard/settings", "Sozlamalar"],
-          ].map(([to, label]) => (
+          {tabs.map(([to, label]) => (
             <Link key={to} to={to} className="shrink-0 whitespace-nowrap rounded px-2.5 py-1.5 hover:bg-muted [&.active]:bg-muted [&.active]:font-semibold" activeProps={{ className: "active" }}>{label}</Link>
           ))}
         </nav>
