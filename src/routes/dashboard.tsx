@@ -27,6 +27,7 @@ function DashboardLayout() {
             <Link to="/dashboard/members" className="rounded px-3 py-1.5 hover:bg-muted">A'zolar</Link>
             <Link to="/dashboard/requests" className="rounded px-3 py-1.5 hover:bg-muted">So'rovlar</Link>
             <Link to="/dashboard/events" className="rounded px-3 py-1.5 hover:bg-muted">Tadbirlar</Link>
+            <Link to="/dashboard/kinship" className="rounded px-3 py-1.5 hover:bg-muted">Kim kimga?</Link>
             <Link to="/dashboard/settings" className="rounded px-3 py-1.5 hover:bg-muted">Sozlamalar</Link>
             <Button size="sm" variant="ghost" onClick={() => { signOut(); navigate({ to: "/" }); }}>Chiqish</Button>
           </nav>
