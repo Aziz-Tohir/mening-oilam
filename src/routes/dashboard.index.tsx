@@ -54,11 +54,11 @@ function DashboardHome() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Mening oilalarim</h1>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button>+ Yangi oila</Button></DialogTrigger>
-          <DialogContent>
+          <DialogTrigger asChild><Button className="w-full sm:w-auto">+ Yangi oila</Button></DialogTrigger>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Yangi oila yaratish</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-3">
               <div><Label>Oila nomi *</Label><Input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Alievlar oilasi" /></div>
