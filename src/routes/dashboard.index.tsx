@@ -24,7 +24,7 @@ function DashboardHome() {
   const families = famRes?.families ?? [];
   const familyIds = families.map((f: any) => f.id).join(",");
 
-  const { data: aggregated, loading: aggLoading, refetch: refetchAgg } = useCachedServer<{
+  const { data: aggregated, loading: aggLoading, refetch: refetchAgg, ts: aggTs, stale: aggStale } = useCachedServer<{
     stats: Record<string, any>; events: any[]; bdays: any[];
   }>(
     `dashboard:agg:${familyIds}`,
