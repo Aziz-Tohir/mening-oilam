@@ -91,10 +91,10 @@ function TreePage() {
   const [familyId, setFamilyId] = useState("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  const { data: memRes, refetch: refetchMembers } = useCachedServer<{ members: any[] }>(
+  const { data: memRes, refetch: refetchMembers, ts: memTs, stale: memStale, loading: memLoading } = useCachedServer<{ members: any[] }>(
     `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
-  const { data: relRes, refetch: refetchRels } = useCachedServer<{ relationships: any[] }>(
+  const { data: relRes, refetch: refetchRels, ts: relTs, stale: relStale, loading: relLoading } = useCachedServer<{ relationships: any[] }>(
     `rels:${familyId}`, listRelationships, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
   const members = memRes?.members ?? [];
