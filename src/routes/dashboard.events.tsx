@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
 import { listEvents, createEvent, deleteEvent, upcomingBirthdays } from "@/server/events.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/events")({
