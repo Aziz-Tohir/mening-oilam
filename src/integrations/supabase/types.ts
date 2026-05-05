@@ -100,6 +100,69 @@ export type Database = {
           },
         ]
       }
+      banned_words: {
+        Row: {
+          action: string
+          created_at: string
+          created_by: string | null
+          family_id: string
+          id: string
+          is_regex: boolean
+          pattern: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          created_by?: string | null
+          family_id: string
+          id?: string
+          is_regex?: boolean
+          pattern: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          created_by?: string | null
+          family_id?: string
+          id?: string
+          is_regex?: boolean
+          pattern?: string
+        }
+        Relationships: []
+      }
+      bot_broadcasts: {
+        Row: {
+          created_at: string
+          failures_count: number
+          family_id: string
+          id: string
+          message_text: string
+          recipients_count: number
+          sent_by_user_id: string | null
+          target: string
+        }
+        Insert: {
+          created_at?: string
+          failures_count?: number
+          family_id: string
+          id?: string
+          message_text: string
+          recipients_count?: number
+          sent_by_user_id?: string | null
+          target: string
+        }
+        Update: {
+          created_at?: string
+          failures_count?: number
+          family_id?: string
+          id?: string
+          message_text?: string
+          recipients_count?: number
+          sent_by_user_id?: string | null
+          target?: string
+        }
+        Relationships: []
+      }
       bot_integrations: {
         Row: {
           added_by: string | null
@@ -337,6 +400,10 @@ export type Database = {
       }
       family_settings: {
         Row: {
+          allowed_link_domains: string[]
+          anti_flood_seconds: number
+          anti_forward: boolean
+          anti_link: boolean
           birthday_notify_time: string
           delete_join_leave_messages: boolean
           family_id: string
@@ -346,13 +413,19 @@ export type Database = {
           join_request_auto_approve_timeout_hours: number
           join_request_auto_reject_timeout_hours: number
           language: string
+          max_warnings: number
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           soft_moderation_enabled: boolean
           updated_at: string
+          warning_action: string
           welcome_message_auto_delete_seconds: number
         }
         Insert: {
+          allowed_link_domains?: string[]
+          anti_flood_seconds?: number
+          anti_forward?: boolean
+          anti_link?: boolean
           birthday_notify_time?: string
           delete_join_leave_messages?: boolean
           family_id: string
@@ -362,13 +435,19 @@ export type Database = {
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
+          max_warnings?: number
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           soft_moderation_enabled?: boolean
           updated_at?: string
+          warning_action?: string
           welcome_message_auto_delete_seconds?: number
         }
         Update: {
+          allowed_link_domains?: string[]
+          anti_flood_seconds?: number
+          anti_forward?: boolean
+          anti_link?: boolean
           birthday_notify_time?: string
           delete_join_leave_messages?: boolean
           family_id?: string
@@ -378,10 +457,12 @@ export type Database = {
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
+          max_warnings?: number
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           soft_moderation_enabled?: boolean
           updated_at?: string
+          warning_action?: string
           welcome_message_auto_delete_seconds?: number
         }
         Relationships: [
@@ -468,6 +549,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      member_warnings: {
+        Row: {
+          auto: boolean
+          created_at: string
+          family_id: string
+          id: string
+          issued_by_telegram_id: number | null
+          issued_by_user_id: string | null
+          member_id: string
+          reason: string
+          telegram_id: number | null
+        }
+        Insert: {
+          auto?: boolean
+          created_at?: string
+          family_id: string
+          id?: string
+          issued_by_telegram_id?: number | null
+          issued_by_user_id?: string | null
+          member_id: string
+          reason: string
+          telegram_id?: number | null
+        }
+        Update: {
+          auto?: boolean
+          created_at?: string
+          family_id?: string
+          id?: string
+          issued_by_telegram_id?: number | null
+          issued_by_user_id?: string | null
+          member_id?: string
+          reason?: string
+          telegram_id?: number | null
+        }
+        Relationships: []
       }
       notification_log: {
         Row: {
