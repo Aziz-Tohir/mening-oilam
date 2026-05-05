@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers, setMemberStatus, updateMember } from "@/server/admin.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { relationshipLabel } from "@/lib/relationships";
 import { toast } from "sonner";
 
@@ -21,7 +22,7 @@ function MembersPage() {
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  const { data: memRes, loading, refetch } = useCachedServer<{ members: any[] }>(
+  const { data: memRes, loading, refetch, ts: memTs, stale: memStale } = useCachedServer<{ members: any[] }>(
     `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
   const members = memRes?.members ?? [];
@@ -40,7 +41,7 @@ function MembersPage() {
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">A'zolar</h1>
+        <div className="flex items-center gap-2"><h1 className="text-2xl font-bold">A'zolar</h1><CacheStatus ts={memTs} stale={memStale} loading={loading && !memRes} /></div>
         <Select value={familyId} onValueChange={setFamilyId}>
           <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Oila tanlang" /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>

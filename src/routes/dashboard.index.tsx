@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { listMyFamilies, createFamily, getFamilyStats } from "@/server/families.functions";
 import { listEvents, upcomingBirthdays } from "@/server/events.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 
@@ -18,12 +19,12 @@ export const Route = createFileRoute("/dashboard/")({
 
 function DashboardHome() {
   const { isAdmin } = useUserRole();
-  const { data: famRes, loading: famLoading, refetch: refetchFams } =
+  const { data: famRes, loading: famLoading, refetch: refetchFams, ts: famTs, stale: famStale } =
     useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
   const families = famRes?.families ?? [];
   const familyIds = families.map((f: any) => f.id).join(",");
 
-  const { data: aggregated, loading: aggLoading, refetch: refetchAgg } = useCachedServer<{
+  const { data: aggregated, loading: aggLoading, refetch: refetchAgg, ts: aggTs, stale: aggStale } = useCachedServer<{
     stats: Record<string, any>; events: any[]; bdays: any[];
   }>(
     `dashboard:agg:${familyIds}`,
@@ -104,8 +105,11 @@ function DashboardHome() {
 
       {/* TOP: Upcoming events */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>🎉 Yaqin tadbirlar</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CardTitle>🎉 Yaqin tadbirlar</CardTitle>
+            <CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} />
+          </div>
           <Link to="/dashboard/events"><Button size="sm" variant="ghost">Hammasi →</Button></Link>
         </CardHeader>
         <CardContent>
@@ -126,7 +130,7 @@ function DashboardHome() {
 
       {/* Birthdays */}
       <Card>
-        <CardHeader><CardTitle>🎂 Yaqin tug'ilgan kunlar</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar</CardTitle><CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} /></CardHeader>
         <CardContent>
           {loading ? <p className="text-sm text-muted-foreground">Yuklanmoqda…</p>
             : bdays.length === 0 ? <p className="text-sm text-muted-foreground">Yaqin tug'ilgan kunlar yo'q.</p>
@@ -147,7 +151,7 @@ function DashboardHome() {
       {/* My families — compact */}
       {families.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>👨‍👩‍👧‍👦 Mening oilalarim</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center gap-2"><CardTitle>👨‍👩‍👧‍👦 Mening oilalarim</CardTitle><CacheStatus ts={famTs} stale={famStale} loading={famLoading && !famRes} /></CardHeader>
           <CardContent className="space-y-2">
             {families.map(f => (
               <div key={f.id} className="flex items-center justify-between rounded border border-border bg-muted/30 px-3 py-2 text-sm">

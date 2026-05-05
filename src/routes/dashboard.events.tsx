@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
 import { listEvents, createEvent, deleteEvent, upcomingBirthdays } from "@/server/events.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/events")({
@@ -25,10 +26,10 @@ function EventsPage() {
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  const { data: evRes, refetch: refetchEvents } = useCachedServer<{ events: any[] }>(
+  const { data: evRes, refetch: refetchEvents, ts: evTs, stale: evStale, loading: evLoading } = useCachedServer<{ events: any[] }>(
     `events:${familyId}`, listEvents, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
-  const { data: bdRes } = useCachedServer<{ items: any[] }>(
+  const { data: bdRes, ts: bdTs, stale: bdStale, loading: bdLoading } = useCachedServer<{ items: any[] }>(
     `bdays:${familyId}`, upcomingBirthdays, { familyId, days: 60 }, { enabled: !!familyId, staleMs: 60_000 },
   );
   const events = evRes?.events ?? [];
@@ -107,7 +108,7 @@ function EventsPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>🎂 Yaqin tug'ilgan kunlar (60 kun)</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar (60 kun)</CardTitle><CacheStatus ts={bdTs} stale={bdStale} loading={bdLoading && !bdRes} /></CardHeader>
         <CardContent>
           {bdays.length === 0 ? (
             <p className="text-sm text-muted-foreground">A'zolarning tug'ilgan sanasini kiriting (A'zolar bo'limida).</p>
@@ -130,7 +131,7 @@ function EventsPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>📅 Tadbirlar</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>📅 Tadbirlar</CardTitle><CacheStatus ts={evTs} stale={evStale} loading={evLoading && !evRes} /></CardHeader>
         <CardContent>
           {events.length === 0 ? (
             <p className="text-sm text-muted-foreground">Hali tadbir yo'q.</p>

@@ -67,7 +67,11 @@ export function useCachedServer<T>(
     return s;
   })();
   const [data, setData] = useState<T | null>(initial?.data ?? null);
+  const [ts, setTs] = useState<number | null>(initial?.ts ?? null);
   const [loading, setLoading] = useState<boolean>(!initial);
+  const [stale, setStale] = useState<boolean>(
+    initial ? Date.now() - initial.ts >= staleMs : false,
+  );
   const [error, setError] = useState<Error | null>(null);
   const reqRef = useRef(0);
 
@@ -76,9 +80,12 @@ export function useCachedServer<T>(
     const cached = memCache.get(key);
     if (!force && cached && Date.now() - cached.ts < staleMs) {
       setData(cached.data);
+      setTs(cached.ts);
+      setStale(false);
       setLoading(false);
       return cached.data;
     }
+    if (cached) setStale(true);
     const myReq = ++reqRef.current;
     try {
       const res = await callServer(fn, payload);
@@ -87,6 +94,8 @@ export function useCachedServer<T>(
       memCache.set(key, entry);
       writeStore(key, entry);
       setData(res);
+      setTs(entry.ts);
+      setStale(false);
       setError(null);
       return res;
     } catch (e: any) {
@@ -101,5 +110,5 @@ export function useCachedServer<T>(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void refetch(false); }, [key, enabled]);
 
-  return { data, loading, error, refetch: () => refetch(true) };
+  return { data, loading, error, ts, stale, refetch: () => refetch(true) };
 }

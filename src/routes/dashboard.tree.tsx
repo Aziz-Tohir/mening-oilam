@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers, listRelationships, addRelationship } from "@/server/admin.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/tree")({
@@ -90,10 +91,10 @@ function TreePage() {
   const [familyId, setFamilyId] = useState("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  const { data: memRes, refetch: refetchMembers } = useCachedServer<{ members: any[] }>(
+  const { data: memRes, refetch: refetchMembers, ts: memTs, stale: memStale, loading: memLoading } = useCachedServer<{ members: any[] }>(
     `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
-  const { data: relRes, refetch: refetchRels } = useCachedServer<{ relationships: any[] }>(
+  const { data: relRes, refetch: refetchRels, ts: relTs, stale: relStale, loading: relLoading } = useCachedServer<{ relationships: any[] }>(
     `rels:${familyId}`, listRelationships, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
   );
   const members = memRes?.members ?? [];
@@ -192,7 +193,10 @@ function TreePage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Shajara daraxti</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold">Shajara daraxti</h1>
+          <CacheStatus ts={Math.max(memTs ?? 0, relTs ?? 0) || null} stale={memStale || relStale} loading={(memLoading && !memRes) || (relLoading && !relRes)} />
+        </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Select value={familyId} onValueChange={setFamilyId}>
             <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Oila" /></SelectTrigger>
