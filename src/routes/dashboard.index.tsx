@@ -151,7 +151,7 @@ function DashboardHome() {
       {/* My families — compact */}
       {families.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>👨‍👩‍👧‍👦 Mening oilalarim</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center gap-2"><CardTitle>👨‍👩‍👧‍👦 Mening oilalarim</CardTitle><CacheStatus ts={famTs} stale={famStale} loading={famLoading && !famRes} /></CardHeader>
           <CardContent className="space-y-2">
             {families.map(f => (
               <div key={f.id} className="flex items-center justify-between rounded border border-border bg-muted/30 px-3 py-2 text-sm">
