@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getMyMemberships, updateMyProfile } from "@/server/profile.functions";
+import { getMyMemberships, updateMyProfile, importTelegramPhoto } from "@/server/profile.functions";
+import { supabase } from "@/integrations/supabase/client";
+
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
@@ -90,6 +92,48 @@ function ProfilePage() {
     }
   };
 
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (file: File) => {
+    if (!m) return;
+    if (!file.type.startsWith("image/")) { toast.error("Faqat rasm fayli"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Rasm 5MB dan kichik bo'lishi kerak"); return; }
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Tizimga kiring");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const key = `${user.id}/${m.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(key, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(key);
+      setForm((f) => ({ ...f, photo_url: pub.publicUrl }));
+      toast.success("Rasm yuklandi. Saqlash tugmasini bosing.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Yuklab bo'lmadi");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const importTg = async () => {
+    if (!m) return;
+    setUploading(true);
+    try {
+      const res = await callServer(importTelegramPhoto, { memberId: m.id });
+      setForm((f) => ({ ...f, photo_url: (res as any).photo_url }));
+      invalidateCache("profile:");
+      invalidateCache(`members:${m.family_id}`);
+      refetch();
+      toast.success("Telegram rasmingiz olindi");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Telegram rasmini olib bo'lmadi");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading && !data) return <div className="text-muted-foreground">Yuklanmoqda…</div>;
 
   if (memberships.length === 0) {
@@ -131,19 +175,44 @@ function ProfilePage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
-              <div className="flex items-center gap-3">
-                {form.photo_url ? (
-                  <img src={form.photo_url} alt="" className="h-16 w-16 rounded-full object-cover" />
-                ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-lg font-semibold">
-                    {(form.full_name || "?").split(" ").map((s) => s[0]).slice(0, 2).join("")}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  {form.photo_url ? (
+                    <img src={form.photo_url} alt="" className="h-20 w-20 rounded-full object-cover border border-border" />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted text-lg font-semibold">
+                      {(form.full_name || "?").split(" ").map((s) => s[0]).slice(0, 2).join("")}
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-wrap gap-2">
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+                    />
+                    <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                      {uploading ? "Yuklanmoqda…" : "Rasm yuklash"}
+                    </Button>
+                    {m.telegram_id && (
+                      <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={importTg}>
+                        Telegram rasmini olish
+                      </Button>
+                    )}
+                    {form.photo_url && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setForm({ ...form, photo_url: "" })}>
+                        O'chirish
+                      </Button>
+                    )}
                   </div>
-                )}
-                <div className="flex-1">
-                  <Label>Foto URL</Label>
-                  <Input value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="https://…" />
                 </div>
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer">Yoki rasmni URL orqali kiriting</summary>
+                  <Input className="mt-2" value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="https://…" />
+                </details>
               </div>
+
 
               <div className="flex items-center justify-between rounded border border-border p-3">
                 <div>
