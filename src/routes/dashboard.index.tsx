@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { listMyFamilies, createFamily, getFamilyStats } from "@/server/families.functions";
+import { listEvents, upcomingBirthdays } from "@/server/events.functions";
 import { callServer } from "@/lib/serverCall";
+import { useUserRole } from "@/hooks/useUserRole";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -14,9 +17,12 @@ export const Route = createFileRoute("/dashboard/")({
 });
 
 function DashboardHome() {
+  const { isAdmin } = useUserRole();
   const [families, setFamilies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Record<string, any>>({});
+  const [events, setEvents] = useState<any[]>([]);
+  const [bdays, setBdays] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", telegram_group_id: "", my_telegram_id: "", my_full_name: "" });
 
@@ -26,10 +32,23 @@ function DashboardHome() {
       const res = await callServer(listMyFamilies);
       setFamilies(res.families);
       const all: Record<string, any> = {};
+      const allEvents: any[] = [];
+      const allBdays: any[] = [];
       for (const f of res.families) {
         try { all[f.id] = await callServer(getFamilyStats, { familyId: f.id }); } catch {}
+        try {
+          const er = await callServer(listEvents, { familyId: f.id });
+          allEvents.push(...er.events.map((e: any) => ({ ...e, _family: f.name })));
+        } catch {}
+        try {
+          const br = await callServer(upcomingBirthdays, { familyId: f.id, days: 60 });
+          allBdays.push(...br.items.map((b: any) => ({ ...b, _family: f.name })));
+        } catch {}
       }
       setStats(all);
+      const now = Date.now();
+      setEvents(allEvents.filter(e => new Date(e.event_at).getTime() >= now - 86400000).sort((a,b) => +new Date(a.event_at) - +new Date(b.event_at)).slice(0, 8));
+      setBdays(allBdays.sort((a,b) => a.days_until - b.days_until).slice(0, 8));
     } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
     setLoading(false);
   };
@@ -53,70 +72,112 @@ function DashboardHome() {
   };
 
   return (
-    <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Mening oilalarim</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="w-full sm:w-auto">+ Yangi oila</Button></DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Yangi oila yaratish</DialogTitle></DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-3">
-              <div><Label>Oila nomi *</Label><Input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Alievlar oilasi" /></div>
-              <div><Label>Sizning to'liq ismingiz *</Label><Input required value={form.my_full_name} onChange={e => setForm({...form, my_full_name: e.target.value})} /></div>
-              <div><Label>Sizning Telegram ID</Label><Input value={form.my_telegram_id} onChange={e => setForm({...form, my_telegram_id: e.target.value})} placeholder="123456789" />
-                <p className="mt-1 text-xs text-muted-foreground">@userinfobot orqali oling</p></div>
-              <div><Label>Telegram guruh ID</Label><Input value={form.telegram_group_id} onChange={e => setForm({...form, telegram_group_id: e.target.value})} placeholder="-100..." />
-                <p className="mt-1 text-xs text-muted-foreground">Botni guruhga qo'shing va guruh ID'ni kiriting</p></div>
-              <Button type="submit" className="w-full">Yaratish</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Bosh sahifa</h1>
 
-      {loading ? <p className="mt-8 text-muted-foreground">Yuklanmoqda…</p> : families.length === 0 ? (
-        <Card className="mt-8"><CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">Hali oila yo'q. Birinchi oilangizni yarating.</p>
-        </CardContent></Card>
-      ) : (
-        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {families.map(f => (
-            <Card key={f.id}>
-              <CardHeader><CardTitle>{f.name}</CardTitle></CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <Stat label="A'zolar" value={stats[f.id]?.members ?? "—"} />
-                  <Stat label="So'rovlar" value={stats[f.id]?.pendingRequests ?? "—"} />
-                  <Stat label="Aloqalar" value={stats[f.id]?.relationships ?? "—"} />
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">Guruh ID: {f.telegram_group_id ?? "—"}</p>
-                <Link to="/dashboard/members" search={{ family: f.id } as any}>
-                  <Button size="sm" variant="outline" className="mt-3 w-full">Boshqarish</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <Card className="mt-8 bg-muted/40">
-        <CardHeader><CardTitle>📋 Qisqa qo'llanma</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>1. <a className="underline" href="https://t.me/BotFather" target="_blank">BotFather</a>'da bot yarating va botni o'z guruhingizga <b>admin</b> qilib qo'shing.</p>
-          <p>2. <a className="underline" href="https://t.me/userinfobot" target="_blank">@userinfobot</a> orqali o'z Telegram ID'ngizni va guruh ID'ni oling.</p>
-          <p>3. Yuqoridagi tugma orqali oila yarating.</p>
-          <p>4. Telegram webhook avtomatik ulangan — botga yozilgan har bir xabar darhol qayta ishlanadi.</p>
-          <p>5. <b>Tug'ilgan kun va tadbir eslatmalari</b> uchun har kuni ertalab (masalan, 08:00) <a className="underline" href="https://cron-job.org" target="_blank" rel="noreferrer">cron-job.org</a>'da quyidagi URL'ni chaqiring:<br/><code className="break-all text-xs">https://project--858ca73f-22bf-4369-b9d0-1671ce37994d.lovable.app/api/public/cron/daily-reminders?secret=YOUR_CRON_SECRET</code></p>
+      {/* TOP: Upcoming events */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>🎉 Yaqin tadbirlar</CardTitle>
+          <Link to="/dashboard/events"><Button size="sm" variant="ghost">Hammasi →</Button></Link>
+        </CardHeader>
+        <CardContent>
+          {loading ? <p className="text-sm text-muted-foreground">Yuklanmoqda…</p>
+            : events.length === 0 ? <p className="text-sm text-muted-foreground">Yaqin tadbirlar yo'q.</p>
+            : <ul className="space-y-2">
+                {events.map(e => (
+                  <li key={e.id} className="flex items-start justify-between gap-3 rounded border border-border bg-muted/30 px-3 py-2">
+                    <div>
+                      <div className="font-medium">{e.title}</div>
+                      <div className="text-xs text-muted-foreground">{new Date(e.event_at).toLocaleString("uz-UZ", { dateStyle: "medium", timeStyle: "short" })}{e.location ? ` · ${e.location}` : ""}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>}
         </CardContent>
       </Card>
-    </div>
-  );
-}
 
-function Stat({ label, value }: { label: string; value: any }) {
-  return (
-    <div className="rounded-md bg-muted/50 p-2 text-center">
-      <div className="text-lg font-bold">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}</div>
+      {/* Birthdays */}
+      <Card>
+        <CardHeader><CardTitle>🎂 Yaqin tug'ilgan kunlar</CardTitle></CardHeader>
+        <CardContent>
+          {loading ? <p className="text-sm text-muted-foreground">Yuklanmoqda…</p>
+            : bdays.length === 0 ? <p className="text-sm text-muted-foreground">Yaqin tug'ilgan kunlar yo'q.</p>
+            : <ul className="space-y-2">
+                {bdays.map(b => (
+                  <li key={b.id} className="flex items-center justify-between rounded border border-border bg-muted/30 px-3 py-2">
+                    <div>
+                      <div className="font-medium">{b.full_name}</div>
+                      <div className="text-xs text-muted-foreground">{b.next_birthday} · {b.turning_age} yosh</div>
+                    </div>
+                    <span className="text-xs font-semibold text-primary">{b.days_until === 0 ? "Bugun" : `${b.days_until} kun`}</span>
+                  </li>
+                ))}
+              </ul>}
+        </CardContent>
+      </Card>
+
+      {/* My families — compact */}
+      {families.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>👨‍👩‍👧‍👦 Mening oilalarim</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {families.map(f => (
+              <div key={f.id} className="flex items-center justify-between rounded border border-border bg-muted/30 px-3 py-2 text-sm">
+                <div>
+                  <div className="font-medium">{f.name}</div>
+                  <div className="text-xs text-muted-foreground">A'zolar: {stats[f.id]?.members ?? "—"} · Aloqalar: {stats[f.id]?.relationships ?? "—"}</div>
+                </div>
+                {isAdmin && (
+                  <Link to="/dashboard/members" search={{ family: f.id } as any}>
+                    <Button size="sm" variant="outline">Boshqarish</Button>
+                  </Link>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin-only: create new family + guide, collapsed */}
+      {isAdmin && (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span>⚙️ Yangi oila va qo'llanma</span>
+              <span className="text-xs text-muted-foreground">ochish</span>
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3 space-y-4">
+            <div className="flex justify-end">
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild><Button size="sm">+ Yangi oila</Button></DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                  <DialogHeader><DialogTitle>Yangi oila yaratish</DialogTitle></DialogHeader>
+                  <form onSubmit={handleCreate} className="space-y-3">
+                    <div><Label>Oila nomi *</Label><Input required value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Alievlar oilasi" /></div>
+                    <div><Label>Sizning to'liq ismingiz *</Label><Input required value={form.my_full_name} onChange={e => setForm({...form, my_full_name: e.target.value})} /></div>
+                    <div><Label>Sizning Telegram ID</Label><Input value={form.my_telegram_id} onChange={e => setForm({...form, my_telegram_id: e.target.value})} placeholder="123456789" />
+                      <p className="mt-1 text-xs text-muted-foreground">@userinfobot orqali oling</p></div>
+                    <div><Label>Telegram guruh ID</Label><Input value={form.telegram_group_id} onChange={e => setForm({...form, telegram_group_id: e.target.value})} placeholder="-100..." />
+                      <p className="mt-1 text-xs text-muted-foreground">Botni guruhga qo'shing va guruh ID'ni kiriting</p></div>
+                    <Button type="submit" className="w-full">Yaratish</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <Card className="bg-muted/40">
+              <CardHeader><CardTitle className="text-base">📋 Qisqa qo'llanma</CardTitle></CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p>1. <a className="underline" href="https://t.me/BotFather" target="_blank">BotFather</a>'da bot yarating va botni o'z guruhingizga <b>admin</b> qilib qo'shing.</p>
+                <p>2. <a className="underline" href="https://t.me/userinfobot" target="_blank">@userinfobot</a> orqali o'z Telegram ID'ngizni va guruh ID'ni oling.</p>
+                <p>3. Yuqoridagi tugma orqali oila yarating.</p>
+                <p>4. Telegram webhook avtomatik ulangan.</p>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 }
