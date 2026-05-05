@@ -97,20 +97,26 @@ function TreePage() {
   const flowWrap = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    callServer(listMyFamilies).then((r) => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
+    callServer(listMyFamilies)
+      .then((r) => {
+        setFamilies(r.families);
+        if (r.families[0]) setFamilyId(r.families[0].id);
+      })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
 
   const reload = useCallback(async () => {
     if (!familyId) return;
-    const [m, r] = await Promise.all([
-      callServer(listMembers, { familyId }),
-      callServer(listRelationships, { familyId }),
-    ]);
-    setMembers(m.members);
-    setRels(r.relationships);
+    try {
+      const [m, r] = await Promise.all([
+        callServer(listMembers, { familyId }),
+        callServer(listRelationships, { familyId }),
+      ]);
+      setMembers(m.members);
+      setRels(r.relationships);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Daraxtni yuklab bo'lmadi");
+    }
   }, [familyId]);
 
   useEffect(() => { reload(); }, [reload]);
@@ -176,7 +182,7 @@ function TreePage() {
       toast.success("Aloqa qo'shildi");
       setPendingConn(null);
       reload();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
 
   const exportPng = async () => {
@@ -192,15 +198,15 @@ function TreePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Shajara daraxti</h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Select value={familyId} onValueChange={setFamilyId}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Oila" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Oila" /></SelectTrigger>
             <SelectContent>{families.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={filterGender} onValueChange={setFilterGender}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-32 sm:w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Barcha jins</SelectItem>
               <SelectItem value="male">Erkak</SelectItem>
@@ -211,18 +217,18 @@ function TreePage() {
             <Checkbox checked={hideInactive} onCheckedChange={(v) => setHideInactive(!!v)} />
             Faqat faollar
           </label>
-          <Button variant="outline" size="sm" onClick={exportPng}>PNG yuklab olish</Button>
+          <Button variant="outline" size="sm" onClick={exportPng}>PNG</Button>
         </div>
       </div>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
             A'zoga bosing — profil ochiladi. Ikki node'ni torting — yangi aloqa qo'shasiz.
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div ref={flowWrap} style={{ height: "70vh" }} className="rounded-md border border-border bg-background">
+        <CardContent className="p-2 sm:p-4">
+          <div ref={flowWrap} style={{ height: "min(70vh, 600px)" }} className="rounded-md border border-border bg-background">
             <ReactFlow
               nodes={nodes} edges={edges}
               onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}

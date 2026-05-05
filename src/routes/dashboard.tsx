@@ -19,23 +19,27 @@ function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-muted/20">
-      <header className="border-b border-border bg-background">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-          <Link to="/dashboard" className="flex items-center gap-2 font-semibold">🌳 Shajara</Link>
-          <nav className="flex items-center gap-1 text-sm">
-            <Link to="/dashboard" className="rounded px-3 py-1.5 hover:bg-muted">Bosh sahifa</Link>
-            <Link to="/dashboard/members" className="rounded px-3 py-1.5 hover:bg-muted">A'zolar</Link>
-            <Link to="/dashboard/requests" className="rounded px-3 py-1.5 hover:bg-muted">So'rovlar</Link>
-            <Link to="/dashboard/events" className="rounded px-3 py-1.5 hover:bg-muted">Tadbirlar</Link>
-            <Link to="/dashboard/tree" className="rounded px-3 py-1.5 hover:bg-muted">Daraxt</Link>
-            <Link to="/dashboard/kinship" className="rounded px-3 py-1.5 hover:bg-muted">Kim kimga?</Link>
-            <Link to="/dashboard/bot" className="rounded px-3 py-1.5 hover:bg-muted">Bot</Link>
-            <Link to="/dashboard/settings" className="rounded px-3 py-1.5 hover:bg-muted">Sozlamalar</Link>
-            <Button size="sm" variant="ghost" onClick={() => { signOut(); navigate({ to: "/" }); }}>Chiqish</Button>
-          </nav>
+      <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-3">
+          <Link to="/dashboard" className="flex shrink-0 items-center gap-2 text-sm font-semibold sm:text-base">🌳 Shajara</Link>
+          <Button size="sm" variant="ghost" onClick={() => { signOut(); navigate({ to: "/" }); }}>Chiqish</Button>
         </div>
+        <nav className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-2 pb-2 text-sm sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {[
+            ["/dashboard", "Bosh sahifa"],
+            ["/dashboard/members", "A'zolar"],
+            ["/dashboard/requests", "So'rovlar"],
+            ["/dashboard/events", "Tadbirlar"],
+            ["/dashboard/tree", "Daraxt"],
+            ["/dashboard/kinship", "Kim kimga?"],
+            ["/dashboard/bot", "Bot"],
+            ["/dashboard/settings", "Sozlamalar"],
+          ].map(([to, label]) => (
+            <Link key={to} to={to} className="shrink-0 whitespace-nowrap rounded px-2.5 py-1.5 hover:bg-muted [&.active]:bg-muted [&.active]:font-semibold" activeProps={{ className: "active" }}>{label}</Link>
+          ))}
+        </nav>
       </header>
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-8">
         <Outlet />
       </main>
     </div>

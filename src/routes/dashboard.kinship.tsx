@@ -24,15 +24,16 @@ function KinshipPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    callServer(listMyFamilies).then(r => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
+    callServer(listMyFamilies)
+      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
 
   useEffect(() => {
     setResult(null); setFrom(""); setTo("");
-    if (familyId) callServer(listMembers, { familyId }).then(r => setMembers(r.members.filter((m: any) => m.status === "active")));
+    if (familyId) callServer(listMembers, { familyId })
+      .then(r => setMembers(r.members.filter((m: any) => m.status === "active")))
+      .catch((e: any) => toast.error(e?.message ?? "A'zolarni yuklab bo'lmadi"));
   }, [familyId]);
 
   const memberById = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members]);
@@ -43,16 +44,16 @@ function KinshipPage() {
     try {
       const res = await callServer(computeKinship, { familyId, fromMemberId: from, toMemberId: to });
       setResult(res);
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.message ?? "Hisoblab bo'lmadi"); }
     setLoading(false);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Kim kimga kim?</h1>
         <Select value={familyId} onValueChange={setFamilyId}>
-          <SelectTrigger className="w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>

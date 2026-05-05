@@ -29,25 +29,24 @@ function BotPage() {
   const [familyId, setFamilyId] = useState("");
 
   useEffect(() => {
-    callServer(listMyFamilies).then(r => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
+    callServer(listMyFamilies)
+      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Bot boshqaruvi</h1>
         <Select value={familyId} onValueChange={setFamilyId}>
-          <SelectTrigger className="w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
 
       {familyId && (
         <Tabs defaultValue="moderation">
-          <TabsList>
+          <TabsList className="flex w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="moderation"><ShieldAlert className="mr-1 h-4 w-4" />Moderatsiya</TabsTrigger>
             <TabsTrigger value="words">Taqiqlangan so'zlar</TabsTrigger>
             <TabsTrigger value="warnings">Ogohlantirishlar</TabsTrigger>
@@ -71,7 +70,7 @@ function ModerationTab({ familyId }: { familyId: string }) {
   const save = async (patch: any) => {
     setS({ ...s, ...patch });
     try { await callServer(updateSettings, { familyId, patch }); toast.success("Saqlandi"); }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
   if (!s) return <p className="text-muted-foreground">Yuklanmoqda…</p>;
   return (
@@ -124,7 +123,7 @@ function WordsTab({ familyId }: { familyId: string }) {
   const add = async () => {
     if (!pattern.trim()) return;
     try { await callServer(addBannedWord, { familyId, pattern, isRegex, action: action as any }); setPattern(""); reload(); toast.success("Qo'shildi"); }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
   const del = async (id: string) => { await callServer(deleteBannedWord, { familyId, id }); reload(); };
   return (
@@ -174,7 +173,7 @@ function WarningsTab({ familyId }: { familyId: string }) {
   const add = async () => {
     if (!memberId || !reason.trim()) return;
     try { await callServer(addWarning, { familyId, memberId, reason }); setReason(""); reload(); toast.success("Berildi"); }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
   const clear = async (mId: string) => { await callServer(clearWarnings, { familyId, memberId: mId }); reload(); };
   return (
@@ -220,7 +219,7 @@ function ActionsTab({ familyId }: { familyId: string }) {
   const act = async (action: any) => {
     if (!memberId) return;
     try { await callServer(moderateMember, { familyId, memberId, action }); toast.success("Bajarildi"); }
-    catch (e: any) { toast.error(e.message); }
+    catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
   return (
     <Card>
@@ -257,7 +256,7 @@ function BroadcastTab({ familyId }: { familyId: string }) {
       const r = await callServer(sendBroadcast, { familyId, target, text });
       toast.success(`Yuborildi: ${r.recipients}, xato: ${r.failures}`);
       setText(""); reload();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
     setSending(false);
   };
   return (

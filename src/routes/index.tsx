@@ -28,26 +28,26 @@ function Index() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-20">
+      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
         <section className="text-center">
-          <h1 className="mx-auto max-w-3xl text-balance text-5xl font-bold tracking-tight md:text-6xl">
+          <h1 className="mx-auto max-w-3xl text-balance text-3xl font-bold tracking-tight sm:text-5xl md:text-6xl">
             Oilaviy aloqalarni mustahkamlovchi <span className="text-primary">Telegram bot</span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-2xl text-balance text-base text-muted-foreground sm:mt-6 sm:text-lg">
             Shajara — bu yopiq oilaviy guruhlar uchun yaratilgan boshqaruv va shajara tizimi.
             Xavfsiz onboarding, qarindoshlik aloqalari va admin paneli bir joyda.
           </p>
-          <div className="mt-10 flex items-center justify-center gap-3">
-            <Link to="/login">
-              <Button size="lg">Boshlash</Button>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row">
+            <Link to="/login" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto">Boshlash</Button>
             </Link>
-            <a href="#features">
-              <Button size="lg" variant="outline">Imkoniyatlar</Button>
+            <a href="#features" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">Imkoniyatlar</Button>
             </a>
           </div>
         </section>
 
-        <section id="features" className="mt-24 grid gap-6 md:grid-cols-3">
+        <section id="features" className="mt-16 grid gap-4 sm:mt-24 sm:gap-6 md:grid-cols-3">
           {[
             { icon: "🔐", title: "Xavfsiz onboarding", desc: "Yangi a'zo qarindoshi va admin tasdig'idan keyingina guruhga qo'shiladi." },
             { icon: "🌳", title: "Oila shajarasi", desc: "Har bir a'zo va ular orasidagi qarindoshlik aloqalari saqlanadi." },

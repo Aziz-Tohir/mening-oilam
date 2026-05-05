@@ -19,33 +19,49 @@ function MembersPage() {
   const [families, setFamilies] = useState<any[]>([]);
   const [familyId, setFamilyId] = useState<string>("");
   const [members, setMembers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { callServer(listMyFamilies).then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); }); }, []);
-  useEffect(() => { if (familyId) callServer(listMembers, { familyId }).then(r => setMembers(r.members)); }, [familyId]);
+  useEffect(() => {
+    callServer(listMyFamilies)
+      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); else setLoading(false); })
+      .catch((e: any) => { toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"); setLoading(false); });
+  }, []);
+  useEffect(() => {
+    if (!familyId) return;
+    setLoading(true);
+    callServer(listMembers, { familyId })
+      .then(r => setMembers(r.members))
+      .catch((e: any) => toast.error(e?.message ?? "A'zolarni yuklab bo'lmadi"))
+      .finally(() => setLoading(false));
+  }, [familyId]);
 
   const toggleBlock = async (m: any) => {
     const next = m.status === "blocked" ? "active" : "blocked";
-    await callServer(setMemberStatus, { familyId, memberId: m.id, status: next });
-    toast.success("Yangilandi");
-    callServer(listMembers, { familyId }).then(r => setMembers(r.members));
+    try {
+      await callServer(setMemberStatus, { familyId, memberId: m.id, status: next });
+      toast.success("Yangilandi");
+      const r = await callServer(listMembers, { familyId });
+      setMembers(r.members);
+    } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">A'zolar</h1>
         <Select value={familyId} onValueChange={setFamilyId}>
-          <SelectTrigger className="w-64"><SelectValue placeholder="Oila tanlang" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Oila tanlang" /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
-      <Card className="mt-6 overflow-hidden">
-        <table className="w-full text-sm">
+      <Card className="mt-6 overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-muted/50 text-left">
             <tr><th className="p-3">Ism</th><th className="p-3">Username</th><th className="p-3">Aloqa</th><th className="p-3">Tug'ilgan kun</th><th className="p-3">Status</th><th className="p-3"></th></tr>
           </thead>
           <tbody>
-            {members.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Hali a'zo yo'q</td></tr>}
+            {loading && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Yuklanmoqda…</td></tr>}
+            {!loading && members.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Hali a'zo yo'q</td></tr>}
             {members.map(m => (
               <tr key={m.id} className="border-t border-border">
                 <td className="p-3 font-medium">{m.full_name}</td>
@@ -59,8 +75,9 @@ function MembersPage() {
                       try {
                         await callServer(updateMember, { familyId, memberId: m.id, patch: { birth_date: v } });
                         toast.success("Saqlandi");
-                        callServer(listMembers, { familyId }).then(r => setMembers(r.members));
-                      } catch (err: any) { toast.error(err.message); }
+                        const r = await callServer(listMembers, { familyId });
+                        setMembers(r.members);
+                      } catch (err: any) { toast.error(err?.message ?? "Saqlab bo'lmadi"); }
                     }} />
                 </td>
                 <td className="p-3"><Badge variant={m.status === "active" ? "default" : "secondary"}>{m.status}</Badge></td>

@@ -31,19 +31,22 @@ function EventsPage() {
   });
 
   useEffect(() => {
-    callServer(listMyFamilies).then(r => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
+    callServer(listMyFamilies)
+      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
+      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
 
   const reload = async (fid: string) => {
-    const [e, b] = await Promise.all([
-      callServer(listEvents, { familyId: fid }),
-      callServer(upcomingBirthdays, { familyId: fid, days: 60 }),
-    ]);
-    setEvents(e.events);
-    setBdays(b.items);
+    try {
+      const [e, b] = await Promise.all([
+        callServer(listEvents, { familyId: fid }),
+        callServer(upcomingBirthdays, { familyId: fid, days: 60 }),
+      ]);
+      setEvents(e.events);
+      setBdays(b.items);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Tadbirlarni yuklab bo'lmadi");
+    }
   };
 
   useEffect(() => { if (familyId) reload(familyId); }, [familyId]);
@@ -70,23 +73,25 @@ function EventsPage() {
 
   const remove = async (id: string) => {
     if (!confirm("Tadbirni o'chirasizmi?")) return;
-    await callServer(deleteEvent, { familyId, id });
-    toast.success("O'chirildi");
-    reload(familyId);
+    try {
+      await callServer(deleteEvent, { familyId, id });
+      toast.success("O'chirildi");
+      reload(familyId);
+    } catch (e: any) { toast.error(e?.message ?? "O'chirib bo'lmadi"); }
   };
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Tadbirlar va tug'ilgan kunlar</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Select value={familyId} onValueChange={setFamilyId}>
-            <SelectTrigger className="w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
             <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
           </Select>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button disabled={!familyId}>+ Yangi tadbir</Button></DialogTrigger>
-            <DialogContent>
+            <DialogTrigger asChild><Button disabled={!familyId} className="w-full sm:w-auto">+ Yangi tadbir</Button></DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>Yangi tadbir</DialogTitle></DialogHeader>
               <form onSubmit={submit} className="space-y-3">
                 <div><Label>Sarlavha *</Label><Input required value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="Nikoh to'yi" /></div>
