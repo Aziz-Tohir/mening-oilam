@@ -110,7 +110,11 @@ async function handleMessage(msg: TgMessage) {
   if (!userId) return;
 
   if (text.startsWith("/start")) {
-    await sendWelcome(userId);
+    await sendMessage(
+      userId,
+      "👋 Assalomu alaykum! Men <b>Shajara boti</b>man.\n\nTo'liq yordam uchun /help yuboring.",
+      { parse_mode: "HTML" },
+    );
     await sendStartFlow(userId, msg.from!);
     return;
   }
