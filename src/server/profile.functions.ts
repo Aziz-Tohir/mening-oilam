@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { tgCall } from "./telegram.server";
 
 export const getMyMemberships = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
