@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
-import { listMembers, setMemberStatus } from "@/server/admin.functions";
+import { listMembers, setMemberStatus, updateMember } from "@/server/admin.functions";
 import { callServer } from "@/lib/serverCall";
 import { relationshipLabel } from "@/lib/relationships";
 import { toast } from "sonner";
@@ -41,15 +42,27 @@ function MembersPage() {
       <Card className="mt-6 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-left">
-            <tr><th className="p-3">Ism</th><th className="p-3">Username</th><th className="p-3">Aloqa</th><th className="p-3">Status</th><th className="p-3"></th></tr>
+            <tr><th className="p-3">Ism</th><th className="p-3">Username</th><th className="p-3">Aloqa</th><th className="p-3">Tug'ilgan kun</th><th className="p-3">Status</th><th className="p-3"></th></tr>
           </thead>
           <tbody>
-            {members.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">Hali a'zo yo'q</td></tr>}
+            {members.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Hali a'zo yo'q</td></tr>}
             {members.map(m => (
               <tr key={m.id} className="border-t border-border">
                 <td className="p-3 font-medium">{m.full_name}</td>
                 <td className="p-3 text-muted-foreground">{m.username ? "@" + m.username : "—"}</td>
                 <td className="p-3">{relationshipLabel(m.relationship_to_inviter)}</td>
+                <td className="p-3">
+                  <Input type="date" defaultValue={m.birth_date ?? ""} className="h-8 w-36"
+                    onBlur={async (e) => {
+                      const v = e.target.value || null;
+                      if (v === (m.birth_date ?? null)) return;
+                      try {
+                        await callServer(updateMember, { familyId, memberId: m.id, patch: { birth_date: v } });
+                        toast.success("Saqlandi");
+                        callServer(listMembers, { familyId }).then(r => setMembers(r.members));
+                      } catch (err: any) { toast.error(err.message); }
+                    }} />
+                </td>
                 <td className="p-3"><Badge variant={m.status === "active" ? "default" : "secondary"}>{m.status}</Badge></td>
                 <td className="p-3 text-right">
                   <Button size="sm" variant="outline" onClick={() => toggleBlock(m)}>

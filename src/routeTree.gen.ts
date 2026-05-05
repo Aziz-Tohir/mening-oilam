@@ -16,8 +16,10 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
 import { Route as DashboardMembersRouteImport } from './routes/dashboard.members'
+import { Route as DashboardEventsRouteImport } from './routes/dashboard.events'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/telegram/poll'
+import { Route as ApiPublicCronDailyRemindersRouteImport } from './routes/api/public/cron/daily-reminders'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -54,6 +56,11 @@ const DashboardMembersRoute = DashboardMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardEventsRoute = DashboardEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ApiPublicTelegramWebhookRoute =
   ApiPublicTelegramWebhookRouteImport.update({
     id: '/api/public/telegram/webhook',
@@ -65,25 +72,35 @@ const ApiPublicTelegramPollRoute = ApiPublicTelegramPollRouteImport.update({
   path: '/api/public/telegram/poll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronDailyRemindersRoute =
+  ApiPublicCronDailyRemindersRouteImport.update({
+    id: '/api/public/cron/daily-reminders',
+    path: '/api/public/cron/daily-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -92,10 +109,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
+  '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -105,20 +124,24 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/dashboard/events'
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
+    | '/dashboard/events'
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard'
+    | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
   id:
@@ -126,10 +149,12 @@ export interface FileRouteTypes {
     | '/'
     | '/dashboard'
     | '/login'
+    | '/dashboard/events'
     | '/dashboard/members'
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/'
+    | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
   fileRoutesById: FileRoutesById
@@ -138,6 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiPublicCronDailyRemindersRoute: typeof ApiPublicCronDailyRemindersRoute
   ApiPublicTelegramPollRoute: typeof ApiPublicTelegramPollRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
@@ -193,6 +219,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardMembersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/events': {
+      id: '/dashboard/events'
+      path: '/events'
+      fullPath: '/dashboard/events'
+      preLoaderRoute: typeof DashboardEventsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/api/public/telegram/webhook': {
       id: '/api/public/telegram/webhook'
       path: '/api/public/telegram/webhook'
@@ -207,10 +240,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/daily-reminders': {
+      id: '/api/public/cron/daily-reminders'
+      path: '/api/public/cron/daily-reminders'
+      fullPath: '/api/public/cron/daily-reminders'
+      preLoaderRoute: typeof ApiPublicCronDailyRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface DashboardRouteChildren {
+  DashboardEventsRoute: typeof DashboardEventsRoute
   DashboardMembersRoute: typeof DashboardMembersRoute
   DashboardRequestsRoute: typeof DashboardRequestsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
@@ -218,6 +259,7 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardEventsRoute: DashboardEventsRoute,
   DashboardMembersRoute: DashboardMembersRoute,
   DashboardRequestsRoute: DashboardRequestsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
@@ -232,6 +274,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiPublicCronDailyRemindersRoute: ApiPublicCronDailyRemindersRoute,
   ApiPublicTelegramPollRoute: ApiPublicTelegramPollRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }
