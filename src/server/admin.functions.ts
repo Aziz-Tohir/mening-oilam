@@ -39,6 +39,28 @@ export const setMemberStatus = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    familyId: z.string().uuid(),
+    memberId: z.string().uuid(),
+    patch: z.object({
+      birth_date: z.string().nullable().optional(),
+      phone: z.string().max(32).nullable().optional(),
+      bio: z.string().max(1000).nullable().optional(),
+      full_name: z.string().min(1).max(128).optional(),
+    }),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase.from("family_members")
+      .update(data.patch as never)
+      .eq("id", data.memberId)
+      .eq("family_id", data.familyId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const listJoinRequests = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
