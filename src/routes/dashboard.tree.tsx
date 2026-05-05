@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers, listRelationships, addRelationship } from "@/server/admin.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/tree")({
@@ -85,10 +85,27 @@ function layoutDagre(nodes: Node[], edges: Edge[]) {
 }
 
 function TreePage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState("");
-  const [members, setMembers] = useState<any[]>([]);
-  const [rels, setRels] = useState<any[]>([]);
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
+
+  const { data: memRes, refetch: refetchMembers } = useCachedServer<{ members: any[] }>(
+    `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+  );
+  const { data: relRes, refetch: refetchRels } = useCachedServer<{ relationships: any[] }>(
+    `rels:${familyId}`, listRelationships, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+  );
+  const members = memRes?.members ?? [];
+  const rels = relRes?.relationships ?? [];
+
+  const reload = useCallback(() => {
+    invalidateCache(`members:${familyId}`);
+    invalidateCache(`rels:${familyId}`);
+    refetchMembers();
+    refetchRels();
+  }, [familyId, refetchMembers, refetchRels]);
+
   const [filterGender, setFilterGender] = useState<string>("all");
   const [hideInactive, setHideInactive] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
@@ -96,30 +113,6 @@ function TreePage() {
   const [newRelType, setNewRelType] = useState("father");
   const flowWrap = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then((r) => {
-        setFamilies(r.families);
-        if (r.families[0]) setFamilyId(r.families[0].id);
-      })
-      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
-  }, []);
-
-  const reload = useCallback(async () => {
-    if (!familyId) return;
-    try {
-      const [m, r] = await Promise.all([
-        callServer(listMembers, { familyId }),
-        callServer(listRelationships, { familyId }),
-      ]);
-      setMembers(m.members);
-      setRels(r.relationships);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Daraxtni yuklab bo'lmadi");
-    }
-  }, [familyId]);
-
-  useEffect(() => { reload(); }, [reload]);
 
   const { initialNodes, initialEdges } = useMemo(() => {
     const filtered = members.filter((m: any) => {
