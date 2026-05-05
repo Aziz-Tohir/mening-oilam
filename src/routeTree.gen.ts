@@ -16,6 +16,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardTreeRouteImport } from './routes/dashboard.tree'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
+import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardMembersRouteImport } from './routes/dashboard.members'
 import { Route as DashboardKinshipRouteImport } from './routes/dashboard.kinship'
 import { Route as DashboardEventsRouteImport } from './routes/dashboard.events'
@@ -58,6 +59,11 @@ const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
 const DashboardRequestsRoute = DashboardRequestsRouteImport.update({
   id: '/requests',
   path: '/requests',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardProfileRoute = DashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardMembersRoute = DashboardMembersRouteImport.update({
@@ -112,6 +118,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
+  '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -165,6 +174,7 @@ export interface FileRouteTypes {
     | '/dashboard/events'
     | '/dashboard/kinship'
     | '/dashboard/members'
+    | '/dashboard/profile'
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/tree'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/dashboard/events'
     | '/dashboard/kinship'
     | '/dashboard/members'
+    | '/dashboard/profile'
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/tree'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/dashboard/events'
     | '/dashboard/kinship'
     | '/dashboard/members'
+    | '/dashboard/profile'
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/tree'
@@ -269,6 +281,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRequestsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/profile': {
+      id: '/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof DashboardProfileRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/members': {
       id: '/dashboard/members'
       path: '/members'
@@ -333,6 +352,7 @@ interface DashboardRouteChildren {
   DashboardEventsRoute: typeof DashboardEventsRoute
   DashboardKinshipRoute: typeof DashboardKinshipRoute
   DashboardMembersRoute: typeof DashboardMembersRoute
+  DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardRequestsRoute: typeof DashboardRequestsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardTreeRoute: typeof DashboardTreeRoute
@@ -344,6 +364,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEventsRoute: DashboardEventsRoute,
   DashboardKinshipRoute: DashboardKinshipRoute,
   DashboardMembersRoute: DashboardMembersRoute,
+  DashboardProfileRoute: DashboardProfileRoute,
   DashboardRequestsRoute: DashboardRequestsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardTreeRoute: DashboardTreeRoute,
