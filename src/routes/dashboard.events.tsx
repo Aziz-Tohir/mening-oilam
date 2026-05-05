@@ -131,7 +131,7 @@ function EventsPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>📅 Tadbirlar</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>📅 Tadbirlar</CardTitle><CacheStatus ts={evTs} stale={evStale} loading={evLoading && !evRes} /></CardHeader>
         <CardContent>
           {events.length === 0 ? (
             <p className="text-sm text-muted-foreground">Hali tadbir yo'q.</p>
