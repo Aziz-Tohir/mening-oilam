@@ -1,45 +1,130 @@
 ## Maqsad
 
-Botli oilada **botdan o'tmasdan** to'g'ridan-to'g'ri guruhga qo'shilgan foydalanuvchi guruhda yoza olmasin (muted). Bot orqali ro'yxatdan o'tib `family_members.status = 'active'` bo'lgach — avtomatik mute olib tashlanadi. Adminlar buni Sozlamalardan yoqib/o'chirib qo'ya olishi kerak.
+Beshta xususiyatni qo'shish: (1) join-request auto-approve/reject cron, (2) quiet-hours respect daily-reminders'da, (3) invite code + deep linking, (4) /yordam komandasi, (5) statistika va reyting.
 
-## O'zgarishlar
+---
 
-### 1) Sozlama (DB)
+### 1) Auto-approve/reject cron (`/api/public/cron/process-join-requests`)
 
-Migration: `family_settings`'ga ustun qo'shamiz
+Yangi route fayl: `src/routes/api/public/cron/process-join-requests.ts`
 
-- `enforce_bot_onboarding boolean not null default true`
+- Har 30 daqiqada chaqiriladi (pg_cron orqali sozlanadi)
+- `families` ↔ `family_settings` JOIN — har bir oila uchun:
+  - `awaiting_admin_approval` statusdagi `join_requests`larni o'qiydi
+  - `now() - created_at > auto_approve_timeout_hours` → `approveJoinRequest(req)` (mavjud helper'ni `telegramHandlers.server.ts`'dan eksport qilamiz)
+  - `now() - created_at > auto_reject_timeout_hours` → status=`rejected`, applicant'ga DM
+- 0 = o'chirilgan
+- `CRON_SECRET` bilan himoyalangan
+- pg_cron job: `select cron.schedule('process-join-requests','*/30 * * * *', $$ ... $$)` (insert tool orqali)
 
-### 2) Guruhga qo'shilganda mute (`telegramHandlers.server.ts`)
+### 2) Quiet hours `daily-reminders`'da
 
-`handleMessage`'da `msg.new_chat_members` qismini kengaytiramiz:
+`src/routes/api/public/cron/daily-reminders.ts`'ni o'zgartiramiz:
 
-- Family topilsa va `enforce_bot_onboarding = true` bo'lsa, har bir yangi a'zo uchun:
-  - botning o'zini va mavjud `active` `family_members` (telegram_id bo'yicha)ni o'tkazib yuboramiz
-  - qolganlariga `restrictChatMember(chat.id, user.id)` (until_date'siz = doimiy mute)
-  - guruhga qisqa xabar: "@username, iltimos botga /start yuboring va ro'yxatdan o'ting. Tasdiqlangach yozish mumkin." (welcome auto-delete bilan, agar sozlangan bo'lsa)
-  - `action_logs`'ga `joined_unverified_muted` yozuvi
-- `delete_join_leave_messages` mantigi avvalgidek qoladi (xizmat xabarini o'chirish bilan birga mute ham qo'yiladi)
+- `family_settings`'dan `quiet_hours_start`, `quiet_hours_end`, `birthday_notify_time` o'qiymiz
+- Hozirgi vaqt quiet-hours ichida bo'lsa — ushbu oilani **shu chaqiruvda o'tkazib yuboramiz** (cron qayta urinib yuboradi). Time-zone: server UTC; oddiy soat-daqiqa solishtirish (cross-midnight holatini ham qo'llab-quvvatlaymiz: `start > end` bo'lsa wrap)
+- Tug'ilgan kun yuborishni `birthday_notify_time` ± 30 min oynasida bajaramiz, agar bu maydon o'rnatilgan bo'lsa
 
-Shuningdek `chat_member` updateni ham qo'llab-quvvatlash uchun `processUpdate`'da `update.chat_member` shoxini qo'shamiz (foydalanuvchi linkka ergashib o'zi qo'shilgan holatlar uchun) va `setWebhook`'ning `allowed_updates`'ga `chat_member` qo'shilishini tekshiramiz/qayta ro'yxatdan o'tkazamiz.
+### 3) Invite code + deep linking
 
-### 3) Tasdiqlangach unmute
+#### DB migration:
+- `families`'ga `invite_code text unique` qo'shamiz
+- Mavjud oilalarga random 8-belgi code generate qilamiz (migration ichida `update`)
 
-`handleApproveJoin` (join_requests approve) ichida — `family_members.status` `active` bo'lgach, agar `families.telegram_group_id` bor bo'lsa, `restrictChatMember` chaqirib **barcha permissionlarni qaytarib** beramiz. Buning uchun `telegram.server.ts`'ga yangi helper qo'shamiz: `unrestrictChatMember(chatId, userId)` — Telegram `restrictChatMember` ni to'liq permissions bilan chaqiradi (`can_send_messages: true`, ...).
+#### Server:
+- `src/server/families.functions.ts`: `regenerateInviteCode({familyId})` server function — adminlarga
+- `src/server/telegramHandlers.server.ts` `handleMessage`'da `/start fam_<CODE>` payload'ni parse qilamiz:
+  - `text.startsWith("/start ")` bo'lsa → payload'ni olamiz
+  - `fam_XXXXXXXX` formatida bo'lsa → `families.invite_code = XXXXXXXX` orqali topamiz
+  - Topilsa → `startJoinRequest(userId, from, fam.id, fam.name)` to'g'ridan-to'g'ri (oilalar ro'yxatini ko'rsatishni o'tkazib yuboramiz)
 
-### 4) Sozlamalar UI (`dashboard.settings.tsx`)
+#### UI:
+- `dashboard.settings.tsx`'da yangi "Taklif" kartochkasi:
+  - Invite link ko'rsatish: `https://t.me/<BOT_USERNAME>?start=fam_<CODE>`
+  - "Nusxalash" tugmasi
+  - "Yangi kod yaratish" tugmasi (`regenerateInviteCode`)
+- `BOT_USERNAME` env'ni server function orqali qaytaramiz
 
-"Onboarding" kartochkasiga yangi switch:
+### 4) /yordam komandasi
 
-- **"Botdan ro'yxatdan o'tishni majburlash"** → `enforce_bot_onboarding`
-- Yordamchi izoh: "Yoqilgan bo'lsa, guruhga to'g'ridan-to'g'ri qo'shilganlar bot orqali tasdiqlanmaguncha yoza olmaydi."
+`src/server/telegramHandlers.server.ts`:
 
-### 5) admin.functions.ts
+- Private chat'da `/yordam <matn>` → 
+  - foydalanuvchining oila(lari)ni topadi
+  - har bir oila guruhiga: `🆘 Yordam so'rovi:\n${user.full_name}: ${matn}` yuboradi
+  - foydalanuvchiga: "✅ Yordam so'rovingiz oila guruhi(lari)ga yuborildi."
+- Bo'sh matn bo'lsa: "Foydalanish: /yordam <muammoyingiz>"
+- `/help` matnida `/yordam` ham eslatamiz
 
-Patch sxemasini kengaytiramiz (`updateFamilySettings` allaqachon ixtiyoriy patch oladi — alohida o'zgarish shart emas, faqat tip yangilanadi).
+### 5) Statistika va Reyting
+
+#### DB migration: `messages_stats` jadvali
+
+```sql
+create table public.messages_stats (
+  id bigserial primary key,
+  family_id uuid not null,
+  member_id uuid,
+  telegram_id bigint,
+  message_date date not null,
+  messages_count int not null default 0,
+  unique (family_id, telegram_id, message_date)
+);
+create index on public.messages_stats(family_id, message_date);
+-- RLS: members SELECT via is_family_member; deny insert/update/delete to clients (admin only via service role)
+```
+
+#### Tracking (`moderation.server.ts` yoki `telegramHandlers.server.ts`):
+Group message handler oxirida (moderatsiya o'tmasa) — admin client orqali:
+```ts
+upsert with on_conflict (family_id, telegram_id, message_date) - increment messages_count
+```
+Telegram_id orqali `family_members`'dan `member_id` topishga harakat qilamiz (bo'lmasa null).
+
+#### Server function: `src/server/stats.functions.ts`
+- `getFamilyStats({familyId, days=30})` — top 10 a'zo (sum), kunlik trend, jami xabarlar
+- `getMyRank({familyId})` — joriy foydalanuvchi reytingdagi o'rni
+
+#### UI: `src/routes/dashboard.stats.tsx` (yangi tab)
+- Top 10 jadval (full_name, messages_count, badge: 🥇🥈🥉)
+- Oxirgi 30 kun chizmasi (recharts mavjud — bar chart)
+- Family selector
+
+`dashboard.tsx` navigation'iga "📊 Statistika" linki qo'shamiz, `routeTree.gen.ts` avto-yangilanadi.
+
+---
 
 ## Texnik tafsilotlar
 
-- `restrictChatMember` until_date siz = doimiy
-- Bot guruhda admin bo'lishi kerak (allaqachon shart). Agar bot admin emas bo'lsa, API xato qaytaradi — `try/catch` bilan log qilamiz, jarayon to'xtamaydi.
-- `chat_member` updatesi uchun webhook `allowed_updates`'iga `"chat_member"` qo'shilishini ta'minlaymiz (bot tomondan polling/webhook setupida).
+- `approveJoinRequest` hozir `telegramHandlers.server.ts` ichida private. Cron ishlatishi uchun **export** qilamiz.
+- pg_cron jobini `insert` tool orqali sozlash (migration emas — secret-bog'liq URL).
+- Quiet hours bo'lsa, daily-reminders cron'ni 1 soatda bir bor o'rniga ko'proq chaqirish (masalan har 30 daqiqada) tavsiya etamiz; lekin cron sozlamasini o'zgartirmaymiz — faqat skip mantiqini qo'shamiz.
+- `messages_stats` upsert'ni admin (service role) client bilan qilamiz.
+- Invite code generation: `crypto.randomBytes(4).toString('hex').toUpperCase()`.
+
+## Fayllar
+
+**Yangi:**
+- `src/routes/api/public/cron/process-join-requests.ts`
+- `src/routes/dashboard.stats.tsx`
+- `src/server/stats.functions.ts`
+- 2 ta migration: `families.invite_code`, `messages_stats`
+
+**O'zgaradi:**
+- `src/routes/api/public/cron/daily-reminders.ts` (quiet hours)
+- `src/server/telegramHandlers.server.ts` (deep link, /yordam, message stats tracking, export approveJoinRequest)
+- `src/server/families.functions.ts` (regenerateInviteCode, getBotUsername)
+- `src/routes/dashboard.settings.tsx` (Invite kartochkasi)
+- `src/routes/dashboard.tsx` (Statistika nav)
+
+## Tasdiqlanganidan keyin pg_cron sozlanadi
+
+```sql
+select cron.schedule('process-join-requests', '*/30 * * * *', $$
+  select net.http_post(
+    url:='https://mening-oilam.lovable.app/api/public/cron/process-join-requests?secret=<CRON_SECRET>',
+    headers:='{"Content-Type":"application/json"}'::jsonb,
+    body:='{}'::jsonb
+  );
+$$);
+```
