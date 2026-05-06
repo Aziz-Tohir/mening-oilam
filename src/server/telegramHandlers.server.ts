@@ -129,9 +129,48 @@ async function handleMessage(msg: TgMessage) {
     return;
   }
 
+  // Photo sent in private chat → set as avatar for active membership(s)
+  if (msg.photo && Array.isArray(msg.photo) && msg.photo.length > 0) {
+    await handleAvatarPhoto(userId, msg);
+    return;
+  }
+
   // Otherwise: treat as relative-name input for a pending join request
   await handleRelativeInput(userId, msg);
 }
+
+async function handleAvatarPhoto(userId: number, msg: TgMessage) {
+  const db = getAdminDb();
+  const { data: members } = await db
+    .from("family_members")
+    .select("id, family_id, user_id")
+    .eq("telegram_id", userId)
+    .eq("status", "active");
+
+  if (!members || members.length === 0) {
+    await sendMessage(userId, "Avval oilaga qo'shiling, keyin rasm yuboring.");
+    return;
+  }
+
+  // Use the largest photo size
+  const sizes = msg.photo as any[];
+  const best = sizes[sizes.length - 1];
+
+  try {
+    const { setMemberAvatarFromTelegramFile } = await import("./avatar.server");
+    for (const m of members) {
+      await setMemberAvatarFromTelegramFile({
+        fileId: best.file_id,
+        memberId: m.id,
+        telegramId: userId,
+        userId: m.user_id,
+      });
+    }
+    await sendMessage(userId, `✅ Profil rasmingiz yangilandi (${members.length} oilada).`);
+  } catch (e: any) {
+    console.error("[bot] avatar upload failed", e);
+    await sendMessage(userId, "❌ Rasmni saqlab bo'lmadi. Keyinroq urinib ko'ring.");
+  }
 
 // ---------- /start welcome message ----------
 async function sendWelcome(userId: number) {
