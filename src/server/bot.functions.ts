@@ -139,6 +139,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
       sent_by_user_id: context.userId, recipients_count: recipients, failures_count: failures,
       gender_filter: data.genderFilter === "all" ? null : data.genderFilter,
     } as any);
+    await postLog(data.familyId, "actions", `📣 Broadcast (${data.target}, ${data.genderFilter}): ${recipients} ✓ / ${failures} ✗`);
     return { recipients, failures };
   });
 
