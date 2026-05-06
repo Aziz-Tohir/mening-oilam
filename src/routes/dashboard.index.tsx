@@ -108,7 +108,7 @@ function DashboardHome() {
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CardTitle>🎉 Yaqin tadbirlar</CardTitle>
-            <CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} />
+            <CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} onRefresh={() => { invalidateCache("dashboard:"); refetchAgg(); }} />
           </div>
           <Link to="/dashboard/events"><Button size="sm" variant="ghost">Hammasi →</Button></Link>
         </CardHeader>
@@ -130,7 +130,7 @@ function DashboardHome() {
 
       {/* Birthdays */}
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar</CardTitle><CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} /></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar</CardTitle><CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} onRefresh={() => { invalidateCache("dashboard:"); refetchAgg(); }} /></CardHeader>
         <CardContent>
           {loading ? <p className="text-sm text-muted-foreground">Yuklanmoqda…</p>
             : bdays.length === 0 ? <p className="text-sm text-muted-foreground">Yaqin tug'ilgan kunlar yo'q.</p>
@@ -151,7 +151,7 @@ function DashboardHome() {
       {/* My families — compact */}
       {families.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center gap-2"><CardTitle>👨‍👩‍👧‍👦 Mening oilalarim</CardTitle><CacheStatus ts={famTs} stale={famStale} loading={famLoading && !famRes} /></CardHeader>
+          <CardHeader className="flex flex-row items-center gap-2"><CardTitle>👨‍👩‍👧‍👦 Mening oilalarim</CardTitle><CacheStatus ts={famTs} stale={famStale} loading={famLoading && !famRes} onRefresh={() => { invalidateCache("families:"); refetchFams(); }} /></CardHeader>
           <CardContent className="space-y-2">
             {families.map(f => (
               <div key={f.id} className="flex items-center justify-between rounded border border-border bg-muted/30 px-3 py-2 text-sm">

@@ -29,9 +29,11 @@ function EventsPage() {
   const { data: evRes, refetch: refetchEvents, ts: evTs, stale: evStale, loading: evLoading } = useCachedServer<{ events: any[] }>(
     `events:${familyId}`, listEvents, { familyId }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
-  const { data: bdRes, ts: bdTs, stale: bdStale, loading: bdLoading } = useCachedServer<{ items: any[] }>(
+  const { data: bdRes, ts: bdTs, stale: bdStale, loading: bdLoading, refetch: refetchBdays } = useCachedServer<{ items: any[] }>(
     `bdays:${familyId}`, upcomingBirthdays, { familyId, days: 60 }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
+  const refreshBdays = () => { invalidateCache(`bdays:${familyId}`); refetchBdays(); };
+  const refreshEvents = () => { invalidateCache(`events:${familyId}`); refetchEvents(); };
   const events = evRes?.events ?? [];
   const bdays = bdRes?.items ?? [];
 
@@ -108,7 +110,7 @@ function EventsPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar (60 kun)</CardTitle><CacheStatus ts={bdTs} stale={bdStale} loading={bdLoading && !bdRes} /></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar (60 kun)</CardTitle><CacheStatus ts={bdTs} stale={bdStale} loading={bdLoading && !bdRes} onRefresh={refreshBdays} /></CardHeader>
         <CardContent>
           {bdays.length === 0 ? (
             <p className="text-sm text-muted-foreground">A'zolarning tug'ilgan sanasini kiriting (A'zolar bo'limida).</p>
@@ -131,7 +133,7 @@ function EventsPage() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>📅 Tadbirlar</CardTitle><CacheStatus ts={evTs} stale={evStale} loading={evLoading && !evRes} /></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>📅 Tadbirlar</CardTitle><CacheStatus ts={evTs} stale={evStale} loading={evLoading && !evRes} onRefresh={refreshEvents} /></CardHeader>
         <CardContent>
           {events.length === 0 ? (
             <p className="text-sm text-muted-foreground">Hali tadbir yo'q.</p>
