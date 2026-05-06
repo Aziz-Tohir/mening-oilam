@@ -8,7 +8,13 @@ import {
   banChatMember,
   restrictChatMember,
   unrestrictChatMember,
+  getFile,
+  downloadFile,
+  sendPhotoBlob,
+  sendVideoBlob,
+  sendDocumentBlob,
 } from "./telegram.server";
+import { t, getUserLang, type Lang } from "./i18n.server";
 import { RELATIONSHIP_OPTIONS, relationshipLabel } from "@/lib/relationships";
 import { calculateKinship, type EdgeRow } from "@/lib/kinship";
 
