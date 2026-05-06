@@ -70,6 +70,9 @@ function SettingsPage() {
         <Card>
           <CardHeader><CardTitle>Onboarding</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <Row label="Botdan ro'yxatdan o'tishni majburlash (guruhga to'g'ridan-to'g'ri kirganlar yoza olmaydi)">
+              <Switch checked={(settings as any).enforce_bot_onboarding !== false} onCheckedChange={(v) => save({ enforce_bot_onboarding: v } as any)} />
+            </Row>
             <Row label="Admin javobsiz so'rovni avto-tasdiqlash (soat, 0=o'chirilgan)">
               <Input type="number" className="w-24" value={settings.join_request_auto_approve_timeout_hours ?? 0}
                 onBlur={(e) => save({ join_request_auto_approve_timeout_hours: Number(e.target.value) })}

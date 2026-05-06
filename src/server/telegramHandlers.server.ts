@@ -6,6 +6,8 @@ import {
   deleteMessage,
   createChatInviteLink,
   banChatMember,
+  restrictChatMember,
+  unrestrictChatMember,
 } from "./telegram.server";
 import { RELATIONSHIP_OPTIONS, relationshipLabel } from "@/lib/relationships";
 import { calculateKinship, type EdgeRow } from "@/lib/kinship";
@@ -87,9 +89,50 @@ async function handleMessage(msg: TgMessage) {
     if (family) {
       const { data: settings } = await db
         .from("family_settings")
-        .select("delete_join_leave_messages")
+        .select("delete_join_leave_messages, enforce_bot_onboarding, welcome_message_auto_delete_seconds")
         .eq("family_id", family.id)
         .maybeSingle();
+
+      // Mute non-onboarded new members (joined directly without bot flow)
+      if (msg.new_chat_members?.length && (settings as any)?.enforce_bot_onboarding !== false) {
+        const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
+        for (const u of msg.new_chat_members) {
+          if (u.is_bot) continue;
+          if ((u.username ?? "").toLowerCase() === myBotUsername) continue;
+          // Already an active registered member?
+          const { data: existing } = await db
+            .from("family_members")
+            .select("id")
+            .eq("family_id", family.id)
+            .eq("telegram_id", u.id)
+            .eq("status", "active")
+            .maybeSingle();
+          if (existing) continue;
+
+          try {
+            await restrictChatMember(msg.chat.id, u.id);
+            const mention = u.username ? `@${u.username}` : `<a href="tg://user?id=${u.id}">${fullName(u)}</a>`;
+            const botUser = process.env.BOT_USERNAME ? `@${process.env.BOT_USERNAME.replace(/^@/, "")}` : "botga";
+            const sent: any = await sendMessage(
+              msg.chat.id,
+              `👋 ${mention}, iltimos ${botUser} orqali ro'yxatdan o'ting. Tasdiqlangach guruhda yoza olasiz.`,
+              { parse_mode: "HTML" },
+            );
+            const autoDel = (settings as any)?.welcome_message_auto_delete_seconds ?? 0;
+            if (sent?.message_id && autoDel > 0) {
+              setTimeout(() => { deleteMessage(msg.chat.id, sent.message_id).catch(() => {}); }, autoDel * 1000);
+            }
+            await db.from("action_logs").insert({
+              family_id: family.id,
+              action: "joined_unverified_muted",
+              actor_telegram_id: u.id,
+              details: { chat_id: msg.chat.id, username: u.username ?? null, full_name: fullName(u) },
+            });
+          } catch (e) {
+            console.warn("[bot] failed to mute new member", u.id, e);
+          }
+        }
+      }
 
       if ((msg.new_chat_members?.length || msg.left_chat_member) && settings?.delete_join_leave_messages !== false) {
         await deleteMessage(msg.chat.id, msg.message_id);
@@ -548,6 +591,12 @@ async function approveJoinRequest(req: any) {
   // Send invite link
   const { data: family } = await db.from("families").select("telegram_group_id, name").eq("id", req.family_id).maybeSingle();
   if (family?.telegram_group_id) {
+    // If user is already in the group (joined directly and was muted), unmute them
+    try {
+      await unrestrictChatMember(family.telegram_group_id, req.applicant_telegram_id);
+    } catch (e) {
+      console.warn("[bot] unrestrict failed (user may not be in group yet)", e);
+    }
     try {
       const link: any = await createChatInviteLink(family.telegram_group_id, {
         member_limit: 1,
