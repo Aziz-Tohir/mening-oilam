@@ -6,6 +6,8 @@ import {
   deleteMessage,
   createChatInviteLink,
   banChatMember,
+  restrictChatMember,
+  unrestrictChatMember,
 } from "./telegram.server";
 import { RELATIONSHIP_OPTIONS, relationshipLabel } from "@/lib/relationships";
 import { calculateKinship, type EdgeRow } from "@/lib/kinship";
