@@ -95,7 +95,7 @@ async function handleMessage(msg: TgMessage) {
     if (family) {
       const { data: settings } = await db
         .from("family_settings")
-        .select("delete_join_leave_messages, enforce_bot_onboarding, welcome_message_auto_delete_seconds")
+        .select("delete_join_leave_messages, enforce_bot_onboarding, welcome_message_auto_delete_seconds, manage_foreign_bot_media")
         .eq("family_id", family.id)
         .maybeSingle();
 
