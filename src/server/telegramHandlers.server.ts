@@ -534,6 +534,7 @@ async function handleForeignBotMessage(msg: TgMessage, familyId: string, repostE
       family_id: familyId, action: "foreign_media_reposted",
       details: { kind, original_bot: (msg as any).from?.username },
     });
+    await postLog(familyId, "actions", `♻️ Begona bot mediasi qayta yuborildi (${kind})`);
   } catch (e) {
     console.warn("[bot] foreign media repost failed, fallback to delete", e);
     await deleteMessage(msg.chat.id, msg.message_id);
