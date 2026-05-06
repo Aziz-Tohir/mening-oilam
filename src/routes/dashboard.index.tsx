@@ -108,7 +108,7 @@ function DashboardHome() {
         <CardHeader className="flex flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CardTitle>🎉 Yaqin tadbirlar</CardTitle>
-            <CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} />
+            <CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} onRefresh={() => { invalidateCache("dashboard:"); refetchAgg(); }} />
           </div>
           <Link to="/dashboard/events"><Button size="sm" variant="ghost">Hammasi →</Button></Link>
         </CardHeader>
