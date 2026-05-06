@@ -57,6 +57,12 @@ export const createFamily = createServerFn({ method: "POST" })
         status: "active",
         user_id: userId,
       });
+
+      // Link telegram_id to profile so bot/mini-app can recognize this user later
+      const { data: prof } = await admin.from("profiles").select("telegram_id").eq("user_id", userId).maybeSingle();
+      if (!prof || (prof as any).telegram_id == null) {
+        await admin.from("profiles").update({ telegram_id: data.my_telegram_id }).eq("user_id", userId);
+      }
     }
 
     await admin.from("action_logs").insert({
