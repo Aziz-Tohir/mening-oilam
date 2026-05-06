@@ -162,6 +162,38 @@ function SettingsPage() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Bildirishnoma kanallari</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <Row label="Log kanali (chat ID)">
+              <Input className="w-44" type="number" value={settings.log_telegram_chat_id ?? ""}
+                onBlur={(e) => save({ log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => setSettings({ ...settings, log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
+            </Row>
+            <Row label="Admin bildirishnoma kanali">
+              <Input className="w-44" type="number" value={settings.admin_notification_channel_id ?? ""}
+                onBlur={(e) => save({ admin_notification_channel_id: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => setSettings({ ...settings, admin_notification_channel_id: e.target.value ? Number(e.target.value) : null })} />
+            </Row>
+            <Row label="Backup chat (JSON dump shu yerga yuboriladi)">
+              <Input className="w-44" type="number" value={settings.backup_telegram_chat_id ?? ""}
+                onBlur={(e) => save({ backup_telegram_chat_id: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => setSettings({ ...settings, backup_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
+            </Row>
+            <Row label="Backup chastotasi">
+              <Select value={settings.backup_frequency ?? "weekly"} onValueChange={(v) => save({ backup_frequency: v })}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Har kuni</SelectItem>
+                  <SelectItem value="weekly">Haftalik</SelectItem>
+                  <SelectItem value="monthly">Oylik</SelectItem>
+                  <SelectItem value="off">O'chirilgan</SelectItem>
+                </SelectContent>
+              </Select>
+            </Row>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
