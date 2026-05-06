@@ -151,6 +151,27 @@ async function handleMessage(msg: TgMessage) {
       const { moderateGroupMessage } = await import("./moderation.server");
       const moderated = await moderateGroupMessage(msg as any, { id: family.id, telegram_group_id: family.telegram_group_id! });
       if (moderated) return;
+
+      // Track message stats (only if from a real user)
+      if (msg.from && !msg.from.is_bot) {
+        try {
+          const today = new Date().toISOString().slice(0, 10);
+          const { data: mem } = await db.from("family_members")
+            .select("id").eq("family_id", family.id).eq("telegram_id", msg.from.id).maybeSingle();
+          const { data: existing } = await db.from("messages_stats")
+            .select("id, messages_count")
+            .eq("family_id", family.id).eq("telegram_id", msg.from.id).eq("message_date", today)
+            .maybeSingle();
+          if (existing) {
+            await db.from("messages_stats").update({ messages_count: existing.messages_count + 1 }).eq("id", existing.id);
+          } else {
+            await db.from("messages_stats").insert({
+              family_id: family.id, member_id: mem?.id ?? null, telegram_id: msg.from.id,
+              message_date: today, messages_count: 1,
+            });
+          }
+        } catch (e) { console.warn("[stats] track failed", e); }
+      }
     }
     return;
   }
