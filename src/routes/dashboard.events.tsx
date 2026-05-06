@@ -110,7 +110,7 @@ function EventsPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar (60 kun)</CardTitle><CacheStatus ts={bdTs} stale={bdStale} loading={bdLoading && !bdRes} /></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar (60 kun)</CardTitle><CacheStatus ts={bdTs} stale={bdStale} loading={bdLoading && !bdRes} onRefresh={refreshBdays} /></CardHeader>
         <CardContent>
           {bdays.length === 0 ? (
             <p className="text-sm text-muted-foreground">A'zolarning tug'ilgan sanasini kiriting (A'zolar bo'limida).</p>
