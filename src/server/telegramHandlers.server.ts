@@ -14,6 +14,7 @@ import {
   sendVideoBlob,
   sendDocumentBlob,
 } from "./telegram.server";
+import { postLog } from "./logChannel.server";
 import { t, getUserLang, type Lang } from "./i18n.server";
 import { RELATIONSHIP_OPTIONS, relationshipLabel } from "@/lib/relationships";
 import { calculateKinship, type EdgeRow } from "@/lib/kinship";
