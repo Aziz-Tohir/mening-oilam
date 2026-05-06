@@ -7,14 +7,38 @@ export const listMembers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: members, error } = await supabase
       .from("family_members")
       .select("*")
       .eq("family_id", data.familyId)
       .order("joined_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return { members: members ?? [] };
+
+    // Apply female photo visibility policy
+    const { data: settings } = await supabase
+      .from("family_settings")
+      .select("female_photo_visibility")
+      .eq("family_id", data.familyId)
+      .maybeSingle();
+    const policy = (settings as any)?.female_photo_visibility ?? "public";
+
+    let viewerIsFemale = false;
+    const viewer = (members ?? []).find((m: any) => m.user_id === userId);
+    if (viewer) viewerIsFemale = viewer.gender === "female";
+
+    const filtered = (members ?? []).map((m: any) => {
+      if (m.gender !== "female" || !m.photo_url) return m;
+      if (m.user_id === userId) return m; // owner always sees own
+      let hide = false;
+      if (policy === "always_hidden") hide = true;
+      else if (policy === "female_only" && !viewerIsFemale) hide = true;
+      else if (policy === "private_default" && m.photo_is_private) hide = true;
+      else if (policy === "public" && m.photo_is_private) hide = true;
+      return hide ? { ...m, photo_url: null, photo_hidden: true } : m;
+    });
+
+    return { members: filtered };
   });
 
 export const setMemberStatus = createServerFn({ method: "POST" })
