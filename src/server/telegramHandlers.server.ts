@@ -143,7 +143,7 @@ async function handleAvatarPhoto(userId: number, msg: TgMessage) {
   const db = getAdminDb();
   const { data: members } = await db
     .from("family_members")
-    .select("id, family_id, user_id")
+    .select("id, family_id, user_id, families:family_id(name)")
     .eq("telegram_id", userId)
     .eq("status", "active");
 
@@ -156,20 +156,83 @@ async function handleAvatarPhoto(userId: number, msg: TgMessage) {
   const sizes = msg.photo as any[];
   const best = sizes[sizes.length - 1];
 
+  // Stash the file_id and ask for confirmation before overwriting avatars
+  const { data: pending, error: pErr } = await db
+    .from("pending_avatar_uploads")
+    .insert({ telegram_id: userId, file_id: best.file_id } as never)
+    .select("id")
+    .single();
+  if (pErr || !pending) {
+    console.error("[bot] pending avatar insert failed", pErr);
+    await sendMessage(userId, "❌ Rasmni qabul qilib bo'lmadi. Qaytadan urinib ko'ring.");
+    return;
+  }
+
+  const familyNames = (members as any[]).map(m => m.families?.name).filter(Boolean).join(", ");
+  const suffix = members.length > 1 ? ` (${members.length} oila: ${familyNames})` : familyNames ? ` (${familyNames})` : "";
+  await sendMessage(
+    userId,
+    `🖼 Shajara profil rasmingizni shu rasmga o'zgartiraymi?${suffix}`,
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "✅ Ha, o'zgartirish", callback_data: `avok:${pending.id}` },
+          { text: "❌ Yo'q", callback_data: `avno:${pending.id}` },
+        ]],
+      },
+    },
+  );
+}
+
+async function handleAvatarConfirm(cb: TgCallback, data: string) {
+  const [action, pendingId] = data.split(":");
+  const db = getAdminDb();
+  const { data: pending } = await db
+    .from("pending_avatar_uploads")
+    .select("id, telegram_id, file_id")
+    .eq("id", pendingId)
+    .maybeSingle();
+
+  if (!pending || pending.telegram_id !== cb.from.id) {
+    await answerCallbackQuery(cb.id, "Topilmadi yoki muddati tugagan");
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, "⌛️ Muddati tugagan.");
+    return;
+  }
+
+  await db.from("pending_avatar_uploads").delete().eq("id", pendingId);
+
+  if (action === "avno") {
+    await answerCallbackQuery(cb.id, "Bekor qilindi");
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, "❌ Profil rasmi o'zgartirilmadi.");
+    return;
+  }
+
+  const { data: members } = await db
+    .from("family_members")
+    .select("id, user_id")
+    .eq("telegram_id", cb.from.id)
+    .eq("status", "active");
+
+  if (!members || members.length === 0) {
+    await answerCallbackQuery(cb.id, "Oila topilmadi");
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, "Yangilanmoqda…");
   try {
     const { setMemberAvatarFromTelegramFile } = await import("./avatar.server");
     for (const m of members) {
       await setMemberAvatarFromTelegramFile({
-        fileId: best.file_id,
+        fileId: pending.file_id,
         memberId: m.id,
-        telegramId: userId,
+        telegramId: cb.from.id,
         userId: m.user_id,
       });
     }
-    await sendMessage(userId, `✅ Profil rasmingiz yangilandi (${members.length} oilada).`);
-  } catch (e: any) {
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, `✅ Profil rasmingiz yangilandi (${members.length} oilada).`);
+  } catch (e) {
     console.error("[bot] avatar upload failed", e);
-    await sendMessage(userId, "❌ Rasmni saqlab bo'lmadi. Keyinroq urinib ko'ring.");
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, "❌ Rasmni saqlab bo'lmadi.");
   }
 }
 
@@ -347,6 +410,11 @@ async function handleRelativeInput(userId: number, msg: TgMessage) {
 async function handleCallback(cb: TgCallback) {
   const data = cb.data ?? "";
   const db = getAdminDb();
+
+  if (data.startsWith("avok:") || data.startsWith("avno:")) {
+    await handleAvatarConfirm(cb, data);
+    return;
+  }
 
   if (data.startsWith("pickfam:")) {
     const familyId = data.split(":")[1];

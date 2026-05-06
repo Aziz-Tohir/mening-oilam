@@ -637,6 +637,27 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_avatar_uploads: {
+        Row: {
+          created_at: string
+          file_id: string
+          id: string
+          telegram_id: number
+        }
+        Insert: {
+          created_at?: string
+          file_id: string
+          id?: string
+          telegram_id: number
+        }
+        Update: {
+          created_at?: string
+          file_id?: string
+          id?: string
+          telegram_id?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
