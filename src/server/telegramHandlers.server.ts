@@ -846,6 +846,7 @@ export async function approveJoinRequest(req: any) {
     action: "join_request_approved",
     details: { request_id: req.id, applicant: req.applicant_telegram_id },
   });
+  await postLog(req.family_id, "admin", `✅ Qo'shilish so'rovi tasdiqlandi: <b>${req.applicant_full_name ?? req.applicant_telegram_id}</b>`);
 }
 
 async function notifyFamilyAdmins(familyId: string, requestId: string, req: any, relType: string, confirmer: TgUser) {
