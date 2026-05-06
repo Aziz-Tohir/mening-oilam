@@ -17,13 +17,13 @@ export const Route = createFileRoute("/dashboard/members")({
 });
 
 function MembersPage() {
-  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 1_800_000 });
   const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
   const { data: memRes, loading, refetch, ts: memTs, stale: memStale } = useCachedServer<{ members: any[] }>(
-    `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+    `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
   const members = memRes?.members ?? [];
 

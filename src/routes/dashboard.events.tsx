@@ -21,16 +21,16 @@ export const Route = createFileRoute("/dashboard/events")({
 });
 
 function EventsPage() {
-  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 1_800_000 });
   const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
   const { data: evRes, refetch: refetchEvents, ts: evTs, stale: evStale, loading: evLoading } = useCachedServer<{ events: any[] }>(
-    `events:${familyId}`, listEvents, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+    `events:${familyId}`, listEvents, { familyId }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
   const { data: bdRes, ts: bdTs, stale: bdStale, loading: bdLoading } = useCachedServer<{ items: any[] }>(
-    `bdays:${familyId}`, upcomingBirthdays, { familyId, days: 60 }, { enabled: !!familyId, staleMs: 60_000 },
+    `bdays:${familyId}`, upcomingBirthdays, { familyId, days: 60 }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
   const events = evRes?.events ?? [];
   const bdays = bdRes?.items ?? [];
