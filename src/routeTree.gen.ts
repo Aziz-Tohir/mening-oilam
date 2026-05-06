@@ -29,6 +29,7 @@ import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/t
 import { Route as ApiPublicTelegramMiniappAuthRouteImport } from './routes/api/public/telegram/miniapp-auth'
 import { Route as ApiPublicCronProcessJoinRequestsRouteImport } from './routes/api/public/cron/process-join-requests'
 import { Route as ApiPublicCronDailyRemindersRouteImport } from './routes/api/public/cron/daily-reminders'
+import { Route as ApiPublicCronAnnualAwardsRouteImport } from './routes/api/public/cron/annual-awards'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -134,6 +135,12 @@ const ApiPublicCronDailyRemindersRoute =
     path: '/api/public/cron/daily-reminders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronAnnualAwardsRoute =
+  ApiPublicCronAnnualAwardsRouteImport.update({
+    id: '/api/public/cron/annual-awards',
+    path: '/api/public/cron/annual-awards',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
@@ -172,6 +180,7 @@ export interface FileRoutesByTo {
   '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
@@ -195,6 +204,7 @@ export interface FileRoutesById {
   '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/dashboard/tree'
     | '/dashboard/updates'
     | '/dashboard/'
+    | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
     | '/api/public/telegram/miniapp-auth'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/dashboard/tree'
     | '/dashboard/updates'
     | '/dashboard'
+    | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
     | '/api/public/telegram/miniapp-auth'
@@ -262,6 +274,7 @@ export interface FileRouteTypes {
     | '/dashboard/tree'
     | '/dashboard/updates'
     | '/dashboard/'
+    | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
     | '/api/public/telegram/miniapp-auth'
@@ -273,6 +286,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ApiPublicCronAnnualAwardsRoute: typeof ApiPublicCronAnnualAwardsRoute
   ApiPublicCronDailyRemindersRoute: typeof ApiPublicCronDailyRemindersRoute
   ApiPublicCronProcessJoinRequestsRoute: typeof ApiPublicCronProcessJoinRequestsRoute
   ApiPublicTelegramMiniappAuthRoute: typeof ApiPublicTelegramMiniappAuthRoute
@@ -422,6 +436,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronDailyRemindersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/annual-awards': {
+      id: '/api/public/cron/annual-awards'
+      path: '/api/public/cron/annual-awards'
+      fullPath: '/api/public/cron/annual-awards'
+      preLoaderRoute: typeof ApiPublicCronAnnualAwardsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -463,6 +484,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
+  ApiPublicCronAnnualAwardsRoute: ApiPublicCronAnnualAwardsRoute,
   ApiPublicCronDailyRemindersRoute: ApiPublicCronDailyRemindersRoute,
   ApiPublicCronProcessJoinRequestsRoute: ApiPublicCronProcessJoinRequestsRoute,
   ApiPublicTelegramMiniappAuthRoute: ApiPublicTelegramMiniappAuthRoute,
@@ -472,3 +494,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
