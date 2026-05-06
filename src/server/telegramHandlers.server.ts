@@ -359,6 +359,11 @@ async function handleCallback(cb: TgCallback) {
   const data = cb.data ?? "";
   const db = getAdminDb();
 
+  if (data.startsWith("avok:") || data.startsWith("avno:")) {
+    await handleAvatarConfirm(cb, data);
+    return;
+  }
+
   if (data.startsWith("pickfam:")) {
     const familyId = data.split(":")[1];
     const { data: fam } = await db.from("families").select("id, name").eq("id", familyId).maybeSingle();
