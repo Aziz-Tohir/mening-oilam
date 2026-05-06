@@ -195,7 +195,7 @@ function TreePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl font-bold">Shajara daraxti</h1>
-          <CacheStatus ts={Math.max(memTs ?? 0, relTs ?? 0) || null} stale={memStale || relStale} loading={(memLoading && !memRes) || (relLoading && !relRes)} />
+          <CacheStatus ts={Math.max(memTs ?? 0, relTs ?? 0) || null} stale={memStale || relStale} loading={(memLoading && !memRes) || (relLoading && !relRes)} onRefresh={reload} />
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Select value={familyId} onValueChange={setFamilyId}>
