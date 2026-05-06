@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAdminDb } from "./db.server";
+import { postLog } from "./logChannel.server";
 
 export const listMembers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
