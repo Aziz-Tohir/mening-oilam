@@ -91,6 +91,30 @@ function SettingsPage() {
             <Row label="Statistikani ommaviy ko'rsatish"><Switch checked={!!settings.feature_stats_public} onCheckedChange={(v) => save({ feature_stats_public: v })} /></Row>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Ayollar rasmi maxfiyligi</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <Label className="text-sm text-muted-foreground">
+              Ayol a'zolarning profil rasmi kimlarga ko'rinishini tanlang.
+            </Label>
+            <Select
+              value={settings.female_photo_visibility ?? "public"}
+              onValueChange={(v) => save({ female_photo_visibility: v })}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Ochiq — hammaga ko'rinadi</SelectItem>
+                <SelectItem value="private_default">Yangi ayol a'zoda avto-maxfiy</SelectItem>
+                <SelectItem value="female_only">Faqat ayollarga ko'rinsin</SelectItem>
+                <SelectItem value="always_hidden">Hech kimga ko'rinmasin</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              A'zo o'z rasmini har doim ko'radi. "Avto-maxfiy" rejimida yangi ayollar rasmi yopiq boshlanadi.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
