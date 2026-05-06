@@ -1,0 +1,14 @@
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'self';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'step_father';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'step_mother';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'step_son';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'step_daughter';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'half_brother';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'half_sister';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'great_grandfather';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'great_grandmother';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'great_grandson';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'great_granddaughter';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'godfather';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'godmother';
+ALTER TYPE relationship_type ADD VALUE IF NOT EXISTS 'family_friend';
