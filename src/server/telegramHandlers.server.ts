@@ -335,6 +335,7 @@ async function sendWelcome(userId: number) {
     "<b>📋 Buyruqlar:</b>",
     "• /start — oilaga qo'shilish so'rovini yuborish",
     "• /kim — kim kimga kim? (qarindoshlik kalkulyatori)",
+    "• /yordam &lt;matn&gt; — oila guruhiga yordam so'rovi yuborish",
     "• /help yoki /info — shu yordam xabari",
     "",
     "<b>✨ Nimalar qila olaman:</b>",
