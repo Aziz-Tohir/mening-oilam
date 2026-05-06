@@ -201,6 +201,27 @@ export type Database = {
           },
         ]
       }
+      bot_sessions: {
+        Row: {
+          data: Json
+          step: string
+          telegram_id: number
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          step: string
+          telegram_id: number
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          step?: string
+          telegram_id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       event_rsvps: {
         Row: {
           event_id: string
@@ -418,6 +439,7 @@ export type Database = {
           join_request_auto_approve_timeout_hours: number
           join_request_auto_reject_timeout_hours: number
           language: string
+          manage_foreign_bot_media: boolean
           max_warnings: number
           quiet_hours_end: string | null
           quiet_hours_start: string | null
@@ -442,6 +464,7 @@ export type Database = {
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
+          manage_foreign_bot_media?: boolean
           max_warnings?: number
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
@@ -466,6 +489,7 @@ export type Database = {
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
+          manage_foreign_bot_media?: boolean
           max_warnings?: number
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
@@ -698,6 +722,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          language: string | null
           telegram_id: number | null
           telegram_username: string | null
           updated_at: string
@@ -709,6 +734,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          language?: string | null
           telegram_id?: number | null
           telegram_username?: string | null
           updated_at?: string
@@ -720,6 +746,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          language?: string | null
           telegram_id?: number | null
           telegram_username?: string | null
           updated_at?: string

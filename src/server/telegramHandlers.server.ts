@@ -8,7 +8,13 @@ import {
   banChatMember,
   restrictChatMember,
   unrestrictChatMember,
+  getFile,
+  downloadFile,
+  sendPhotoBlob,
+  sendVideoBlob,
+  sendDocumentBlob,
 } from "./telegram.server";
+import { t, getUserLang, type Lang } from "./i18n.server";
 import { RELATIONSHIP_OPTIONS, relationshipLabel } from "@/lib/relationships";
 import { calculateKinship, type EdgeRow } from "@/lib/kinship";
 
@@ -89,7 +95,7 @@ async function handleMessage(msg: TgMessage) {
     if (family) {
       const { data: settings } = await db
         .from("family_settings")
-        .select("delete_join_leave_messages, enforce_bot_onboarding, welcome_message_auto_delete_seconds")
+        .select("delete_join_leave_messages, enforce_bot_onboarding, welcome_message_auto_delete_seconds, manage_foreign_bot_media")
         .eq("family_id", family.id)
         .maybeSingle();
 
@@ -139,11 +145,11 @@ async function handleMessage(msg: TgMessage) {
         return;
       }
 
-      // Foreign bots: delete any message (text/media) from other bots in the group
+      // Foreign bots: handle media via repost (with caption tag) or just delete
       const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
       const fromUser: any = (msg as any).from;
       if (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) {
-        await deleteMessage(msg.chat.id, msg.message_id);
+        await handleForeignBotMessage(msg, family.id, !!(settings as any)?.manage_foreign_bot_media);
         return;
       }
 
@@ -184,11 +190,7 @@ async function handleMessage(msg: TgMessage) {
   if (text.startsWith("/start")) {
     const parts = text.split(/\s+/);
     const payload = parts[1] ?? "";
-    await sendMessage(
-      userId,
-      "👋 Assalomu alaykum! Men <b>Shajara boti</b>man.\n\nTo'liq yordam uchun /help yuboring.",
-      { parse_mode: "HTML" },
-    );
+    const lang = await getUserLang(db, userId);
     // Deep link: /start fam_<CODE>
     if (payload.startsWith("fam_")) {
       const code = payload.slice(4);
@@ -197,11 +199,16 @@ async function handleMessage(msg: TgMessage) {
         await startJoinRequest(userId, msg.from!, fam.id, fam.name);
         return;
       }
-      await sendMessage(userId, "❌ Taklif kodi noto'g'ri yoki muddati tugagan.");
+      await sendMessage(userId, t("deep_link_invalid", lang));
+      return;
     }
     await sendStartFlow(userId, msg.from!);
     return;
   }
+
+  // Wizard input (e.g., new family name)
+  const wizardHandled = await handleWizardInput(userId, msg);
+  if (wizardHandled) return;
 
   if (text === "/help" || text === "/info") {
     await sendWelcome(userId);
@@ -353,11 +360,12 @@ async function sendWelcome(userId: number) {
   await sendMessage(userId, text, { parse_mode: "HTML" });
 }
 
-// ---------- /start onboarding step 1 ----------
+// ---------- /start aqlli onboarding ----------
 async function sendStartFlow(userId: number, from: TgUser) {
   const db = getAdminDb();
+  const lang = await getUserLang(db, userId);
 
-  // Check if user is already an active member of any family
+  // 1. Mavjud a'zo
   const { data: existingMemberships } = await db
     .from("family_members")
     .select("family_id, families:family_id(id, name)")
@@ -365,37 +373,143 @@ async function sendStartFlow(userId: number, from: TgUser) {
     .eq("status", "active");
 
   if (existingMemberships && existingMemberships.length > 0) {
-    const names = existingMemberships
-      .map((m: any) => m.families?.name)
-      .filter(Boolean)
-      .join(", ");
-    await sendMessage(
-      userId,
-      `✅ Siz allaqachon ${names || "oila"} a'zosisiz.\n\nMini App'ni ochish uchun pastdagi menyu tugmasini bosing yoki /kim buyrug'i orqali qarindoshlikni hisoblang.`,
-    );
+    const names = existingMemberships.map((m: any) => m.families?.name).filter(Boolean).join(", ");
+    await sendMessage(userId, t("already_member", lang, { names: names || "oila" }));
     return;
   }
 
-  // List active families. If only one — auto-pick it. If many — show keyboard.
-  const { data: families } = await db.from("families").select("id, name, telegram_group_id").not("telegram_group_id", "is", null);
-
-  if (!families || families.length === 0) {
-    await sendMessage(
-      userId,
-      "Hozircha hech qanday oila ulanmagan. Iltimos, oila admini bilan bog'laning.",
-    );
+  // 2. Foydalanuvchi tili o'rnatilmaganmi? Til tanlash
+  const { data: prof } = await db.from("profiles").select("language").eq("telegram_id", userId).maybeSingle();
+  if (!prof?.language) {
+    await sendMessage(userId, t("choose_lang", lang), {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🇺🇿 O'zbekcha (lotin)", callback_data: "lang:uz" }, { text: "🇺🇿 Ўзбекча (кирилл)", callback_data: "lang:uz_cyrl" }],
+          [{ text: "🇷🇺 Русский", callback_data: "lang:ru" }, { text: "🇬🇧 English", callback_data: "lang:en" }],
+        ],
+      },
+    });
     return;
   }
 
-  if (families.length === 1) {
-    return startJoinRequest(userId, from, families[0].id, families[0].name);
-  }
-
-  await sendMessage(userId, "Salom! Qaysi oilaga qo'shilmoqchisiz?", {
+  // 3. Yangi user — 2 tanlov
+  await sendMessage(userId, `${t("welcome", lang)}\n\n${t("start_choose_action", lang)}`, {
+    parse_mode: "HTML",
     reply_markup: {
-      inline_keyboard: families.map(f => [{ text: f.name, callback_data: `pickfam:${f.id}` }]),
+      inline_keyboard: [
+        [{ text: t("btn_create_family", lang), callback_data: "wiz:newfam" }],
+        [{ text: t("btn_join_family", lang), callback_data: "wiz:joinfam" }],
+      ],
     },
   });
+}
+
+// ---------- Wizard ----------
+async function setSession(telegramId: number, step: string, data: Record<string, any> = {}) {
+  const db = getAdminDb();
+  await db.from("bot_sessions").upsert({
+    telegram_id: telegramId, step, data, updated_at: new Date().toISOString(),
+  } as any);
+}
+async function getSession(telegramId: number) {
+  const db = getAdminDb();
+  const { data } = await db.from("bot_sessions").select("step, data").eq("telegram_id", telegramId).maybeSingle();
+  return data as { step: string; data: any } | null;
+}
+async function clearSession(telegramId: number) {
+  const db = getAdminDb();
+  await db.from("bot_sessions").delete().eq("telegram_id", telegramId);
+}
+
+async function handleWizardInput(userId: number, msg: TgMessage): Promise<boolean> {
+  const session = await getSession(userId);
+  if (!session) return false;
+  const text = (msg.text ?? "").trim();
+  const db = getAdminDb();
+  const lang = await getUserLang(db, userId);
+
+  if (session.step === "newfam_name") {
+    if (!text || text.length < 2 || text.length > 100) {
+      await sendMessage(userId, t("create_ask_name", lang), { parse_mode: "HTML" });
+      return true;
+    }
+    // Linked profile?
+    const { data: prof } = await db.from("profiles").select("user_id").eq("telegram_id", userId).maybeSingle();
+    if (!prof?.user_id) {
+      await clearSession(userId);
+      await sendMessage(userId, "❌ Avval web sahifada tizimga kiring va Telegram'ni ulang. Keyin qaytadan urinib ko'ring.");
+      return true;
+    }
+    const { data: fam, error: famErr } = await db.from("families").insert({
+      name: text, owner_user_id: prof.user_id,
+    } as any).select("id, invite_code, name").single();
+    if (famErr || !fam) {
+      console.error("[bot] family create failed", famErr);
+      await sendMessage(userId, "❌ Oilani yaratib bo'lmadi.");
+      await clearSession(userId);
+      return true;
+    }
+    await db.from("user_roles").insert({ user_id: prof.user_id, family_id: fam.id, role: "superadmin" } as any);
+    await db.from("family_settings").insert({ family_id: fam.id } as any);
+    await clearSession(userId);
+
+    const botUser = (process.env.BOT_USERNAME ?? "").replace(/^@/, "");
+    const addUrl = botUser ? `https://t.me/${botUser}?startgroup=${fam.invite_code}` : null;
+    await sendMessage(userId, t("create_done", lang, { name: fam.name }), { parse_mode: "HTML" });
+    await sendMessage(userId, t("create_group_steps", lang), {
+      parse_mode: "HTML",
+      reply_markup: addUrl ? { inline_keyboard: [[{ text: t("btn_add_to_group", lang), url: addUrl }]] } : undefined,
+    });
+    return true;
+  }
+
+  return false;
+}
+
+// ---------- Begona bot media boshqaruvi ----------
+async function handleForeignBotMessage(msg: TgMessage, familyId: string, repostEnabled: boolean) {
+  const db = getAdminDb();
+  // Always delete the original
+  if (!repostEnabled) {
+    await deleteMessage(msg.chat.id, msg.message_id);
+    return;
+  }
+  // Try to identify a real user to credit (forward_from / via_bot user)
+  const fwdFrom: any = (msg as any).forward_from;
+  const reposterName = fwdFrom ? fullName(fwdFrom as any) : (msg as any).from?.username ?? "Mehmon";
+  const lang = await getUserLang(db, (msg as any).from?.id ?? 0, familyId);
+  const caption = t("foreign_media_caption", lang, { name: escapeHtml(String(reposterName)) });
+
+  try {
+    const photo = (msg as any).photo;
+    const video = (msg as any).video;
+    const doc = (msg as any).document;
+    let fileId: string | null = null;
+    let kind: "photo" | "video" | "document" | null = null;
+    let filename = "file.bin";
+    if (Array.isArray(photo) && photo.length) { fileId = photo[photo.length - 1].file_id; kind = "photo"; }
+    else if (video?.file_id) { fileId = video.file_id; kind = "video"; filename = video.file_name ?? "video.mp4"; }
+    else if (doc?.file_id) { fileId = doc.file_id; kind = "document"; filename = doc.file_name ?? "file.bin"; }
+
+    if (!fileId || !kind) {
+      await deleteMessage(msg.chat.id, msg.message_id);
+      return;
+    }
+    const file = await getFile(fileId);
+    const blob = await downloadFile(file.file_path);
+    if (kind === "photo") await sendPhotoBlob(msg.chat.id, blob, caption);
+    else if (kind === "video") await sendVideoBlob(msg.chat.id, blob, caption);
+    else await sendDocumentBlob(msg.chat.id, blob, filename, caption);
+
+    await deleteMessage(msg.chat.id, msg.message_id);
+    await db.from("action_logs").insert({
+      family_id: familyId, action: "foreign_media_reposted",
+      details: { kind, original_bot: (msg as any).from?.username },
+    });
+  } catch (e) {
+    console.warn("[bot] foreign media repost failed, fallback to delete", e);
+    await deleteMessage(msg.chat.id, msg.message_id);
+  }
 }
 
 async function startJoinRequest(userId: number, from: TgUser, familyId: string, familyName: string) {
@@ -581,6 +695,42 @@ async function handleCallback(cb: TgCallback) {
     await approveJoinRequest(req);
     await answerCallbackQuery(cb.id, "Tasdiqlandi");
     if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, "✅ Tasdiqlandi.");
+    return;
+  }
+
+  if (data.startsWith("lang:")) {
+    const newLang = data.split(":")[1] as Lang;
+    await db.from("profiles").update({ language: newLang } as any).eq("telegram_id", cb.from.id);
+    await answerCallbackQuery(cb.id, t("lang_set", newLang));
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    await sendStartFlow(cb.from.id, cb.from);
+    return;
+  }
+
+  if (data === "wiz:newfam") {
+    await setSession(cb.from.id, "newfam_name", {});
+    await answerCallbackQuery(cb.id);
+    const lang = await getUserLang(db, cb.from.id);
+    await sendMessage(cb.from.id, t("create_ask_name", lang), { parse_mode: "HTML" });
+    return;
+  }
+  if (data === "wiz:joinfam") {
+    await answerCallbackQuery(cb.id);
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    // Reuse legacy family-picker flow
+    const { data: families } = await db.from("families").select("id, name, telegram_group_id").not("telegram_group_id", "is", null);
+    if (!families || families.length === 0) {
+      const lang = await getUserLang(db, cb.from.id);
+      await sendMessage(cb.from.id, t("no_families", lang));
+      return;
+    }
+    if (families.length === 1) {
+      await startJoinRequest(cb.from.id, cb.from, families[0].id, families[0].name);
+      return;
+    }
+    await sendMessage(cb.from.id, "Qaysi oilaga qo'shilmoqchisiz?", {
+      reply_markup: { inline_keyboard: families.map(f => [{ text: f.name, callback_data: `pickfam:${f.id}` }]) },
+    });
     return;
   }
 

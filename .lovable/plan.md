@@ -1,130 +1,121 @@
-## Maqsad
+# Takomillashtirilgan Sprint Rejasi (PDF asosida)
 
-Beshta xususiyatni qo'shish: (1) join-request auto-approve/reject cron, (2) quiet-hours respect daily-reminders'da, (3) invite code + deep linking, (4) /yordam komandasi, (5) statistika va reyting.
-
----
-
-### 1) Auto-approve/reject cron (`/api/public/cron/process-join-requests`)
-
-Yangi route fayl: `src/routes/api/public/cron/process-join-requests.ts`
-
-- Har 30 daqiqada chaqiriladi (pg_cron orqali sozlanadi)
-- `families` ↔ `family_settings` JOIN — har bir oila uchun:
-  - `awaiting_admin_approval` statusdagi `join_requests`larni o'qiydi
-  - `now() - created_at > auto_approve_timeout_hours` → `approveJoinRequest(req)` (mavjud helper'ni `telegramHandlers.server.ts`'dan eksport qilamiz)
-  - `now() - created_at > auto_reject_timeout_hours` → status=`rejected`, applicant'ga DM
-- 0 = o'chirilgan
-- `CRON_SECRET` bilan himoyalangan
-- pg_cron job: `select cron.schedule('process-join-requests','*/30 * * * *', $$ ... $$)` (insert tool orqali)
-
-### 2) Quiet hours `daily-reminders`'da
-
-`src/routes/api/public/cron/daily-reminders.ts`'ni o'zgartiramiz:
-
-- `family_settings`'dan `quiet_hours_start`, `quiet_hours_end`, `birthday_notify_time` o'qiymiz
-- Hozirgi vaqt quiet-hours ichida bo'lsa — ushbu oilani **shu chaqiruvda o'tkazib yuboramiz** (cron qayta urinib yuboradi). Time-zone: server UTC; oddiy soat-daqiqa solishtirish (cross-midnight holatini ham qo'llab-quvvatlaymiz: `start > end` bo'lsa wrap)
-- Tug'ilgan kun yuborishni `birthday_notify_time` ± 30 min oynasida bajaramiz, agar bu maydon o'rnatilgan bo'lsa
-
-### 3) Invite code + deep linking
-
-#### DB migration:
-- `families`'ga `invite_code text unique` qo'shamiz
-- Mavjud oilalarga random 8-belgi code generate qilamiz (migration ichida `update`)
-
-#### Server:
-- `src/server/families.functions.ts`: `regenerateInviteCode({familyId})` server function — adminlarga
-- `src/server/telegramHandlers.server.ts` `handleMessage`'da `/start fam_<CODE>` payload'ni parse qilamiz:
-  - `text.startsWith("/start ")` bo'lsa → payload'ni olamiz
-  - `fam_XXXXXXXX` formatida bo'lsa → `families.invite_code = XXXXXXXX` orqali topamiz
-  - Topilsa → `startJoinRequest(userId, from, fam.id, fam.name)` to'g'ridan-to'g'ri (oilalar ro'yxatini ko'rsatishni o'tkazib yuboramiz)
-
-#### UI:
-- `dashboard.settings.tsx`'da yangi "Taklif" kartochkasi:
-  - Invite link ko'rsatish: `https://t.me/<BOT_USERNAME>?start=fam_<CODE>`
-  - "Nusxalash" tugmasi
-  - "Yangi kod yaratish" tugmasi (`regenerateInviteCode`)
-- `BOT_USERNAME` env'ni server function orqali qaytaramiz
-
-### 4) /yordam komandasi
-
-`src/server/telegramHandlers.server.ts`:
-
-- Private chat'da `/yordam <matn>` → 
-  - foydalanuvchining oila(lari)ni topadi
-  - har bir oila guruhiga: `🆘 Yordam so'rovi:\n${user.full_name}: ${matn}` yuboradi
-  - foydalanuvchiga: "✅ Yordam so'rovingiz oila guruhi(lari)ga yuborildi."
-- Bo'sh matn bo'lsa: "Foydalanish: /yordam <muammoyingiz>"
-- `/help` matnida `/yordam` ham eslatamiz
-
-### 5) Statistika va Reyting
-
-#### DB migration: `messages_stats` jadvali
-
-```sql
-create table public.messages_stats (
-  id bigserial primary key,
-  family_id uuid not null,
-  member_id uuid,
-  telegram_id bigint,
-  message_date date not null,
-  messages_count int not null default 0,
-  unique (family_id, telegram_id, message_date)
-);
-create index on public.messages_stats(family_id, message_date);
--- RLS: members SELECT via is_family_member; deny insert/update/delete to clients (admin only via service role)
-```
-
-#### Tracking (`moderation.server.ts` yoki `telegramHandlers.server.ts`):
-Group message handler oxirida (moderatsiya o'tmasa) — admin client orqali:
-```ts
-upsert with on_conflict (family_id, telegram_id, message_date) - increment messages_count
-```
-Telegram_id orqali `family_members`'dan `member_id` topishga harakat qilamiz (bo'lmasa null).
-
-#### Server function: `src/server/stats.functions.ts`
-- `getFamilyStats({familyId, days=30})` — top 10 a'zo (sum), kunlik trend, jami xabarlar
-- `getMyRank({familyId})` — joriy foydalanuvchi reytingdagi o'rni
-
-#### UI: `src/routes/dashboard.stats.tsx` (yangi tab)
-- Top 10 jadval (full_name, messages_count, badge: 🥇🥈🥉)
-- Oxirgi 30 kun chizmasi (recharts mavjud — bar chart)
-- Family selector
-
-`dashboard.tsx` navigation'iga "📊 Statistika" linki qo'shamiz, `routeTree.gen.ts` avto-yangilanadi.
+PDF'dagi tavsiyalarni hisobga olib, oldingi reja quyidagicha qayta tuzildi. Bosqichma-bosqich, **Sprint A → B → C** tartibida boraman. Har bir bosqich oxirida to'xtab natijani ko'rsataman.
 
 ---
 
-## Texnik tafsilotlar
+## SPRINT A — Bosqich 1 yakunlash
 
-- `approveJoinRequest` hozir `telegramHandlers.server.ts` ichida private. Cron ishlatishi uchun **export** qilamiz.
-- pg_cron jobini `insert` tool orqali sozlash (migration emas — secret-bog'liq URL).
-- Quiet hours bo'lsa, daily-reminders cron'ni 1 soatda bir bor o'rniga ko'proq chaqirish (masalan har 30 daqiqada) tavsiya etamiz; lekin cron sozlamasini o'zgartirmaymiz — faqat skip mantiqini qo'shamiz.
-- `messages_stats` upsert'ni admin (service role) client bilan qilamiz.
-- Invite code generation: `crypto.randomBytes(4).toString('hex').toUpperCase()`.
+### A1. Ko'p tillilik (i18n) — 4 til to'liq
 
-## Fayllar
+**Fayllar:**
+- `src/utils/transliteration.ts` — lotin↔krill mexanik konverter (alohida util)
+- `src/server/i18n.server.ts` — `t(key, lang, vars)` helper, JSON yuklash
+- `src/server/locales/{uz,uz_cyrl,ru,en}.json` — barcha bot xabarlari, **do'stona/oilaviy ohang** ("Oilamizga xush kelibsiz!" uslubida)
+- DB: `profiles.language` qo'shish (shaxsiy til, `family_settings.language` dan ustun)
+- `src/routes/dashboard.settings.tsx` — til tanlash (oila + shaxsiy)
+- `telegramHandlers.server.ts` `/start` — yangi user uchun til tanlash inline tugmalari
 
-**Yangi:**
-- `src/routes/api/public/cron/process-join-requests.ts`
-- `src/routes/dashboard.stats.tsx`
-- `src/server/stats.functions.ts`
-- 2 ta migration: `families.invite_code`, `messages_stats`
+### A2. Begona bot media boshqaruvi
 
-**O'zgaradi:**
-- `src/routes/api/public/cron/daily-reminders.ts` (quiet hours)
-- `src/server/telegramHandlers.server.ts` (deep link, /yordam, message stats tracking, export approveJoinRequest)
-- `src/server/families.functions.ts` (regenerateInviteCode, getBotUsername)
-- `src/routes/dashboard.settings.tsx` (Invite kartochkasi)
-- `src/routes/dashboard.tsx` (Statistika nav)
+**PDF muhim eslatma:** `forwardMessage` `caption`/`reply_to` qo'shishga ruxsat bermaydi. Shuning uchun **download → reupload** yondashuvi:
 
-## Tasdiqlanganidan keyin pg_cron sozlanadi
+- Bot xabarini aniqlash: `message.from.is_bot === true` va `message.via_bot` tekshiruvi
+- `getFile` → fayl yuklab olish → `sendPhoto`/`sendVideo`/`sendDocument` qayta yuborish
+- `caption` ga: "[Ism] oilamiz bilan ulashdi! 📸"
+- Asl xabar: `deleteMessage`
+- DB: `family_settings.manage_foreign_bot_media boolean default false` (PDF tavsiyasi: aniqroq nom)
+- Settings UI'da toggle
 
-```sql
-select cron.schedule('process-join-requests', '*/30 * * * *', $$
-  select net.http_post(
-    url:='https://mening-oilam.lovable.app/api/public/cron/process-join-requests?secret=<CRON_SECRET>',
-    headers:='{"Content-Type":"application/json"}'::jsonb,
-    body:='{}'::jsonb
-  );
-$$);
-```
+### A3. Botda "Yangi oila yaratish" — Aqlli onboarding
+
+**Kontekstga qarab `/start` 3 holat:**
+
+1. **Deep link** (`/start family_<INVITE_CODE>`) → to'g'ridan-to'g'ri qo'shilish jarayoni
+2. **Mavjud a'zo** (active + family_id bor) → o'z oilasining asosiy menyusi
+3. **Yangi user** → 2 tugma: "🏠 Yangi oila yaratish" / "👥 Mavjud oilaga qo'shilish"
+
+**Wizard state:**
+- DB: `bot_sessions` jadvali (`telegram_id`, `step`, `data jsonb`, `updated_at`)
+- "Yangi oila": oila nomi → `families` insert + `user_roles(superadmin)` + invite_code → guruh yaratish bo'yicha **bosqichma-bosqich yo'riqnoma** + "Botni guruhga admin sifatida qo'shish" havolasi (`t.me/<bot>?startgroup=...`)
+
+---
+
+## SPRINT B — Bosqich 2 yakunlash
+
+### B1. Tug'ilgan kun tabriklash + hisoblagich
+
+- DB: `birthday_greetings (id, family_id, birthday_member_id FK, greeter_telegram_id, greeter_member_id FK nullable, year, created_at)`
+- `daily-reminders.ts` cron: tug'ilgan kun xabariga "🎉 Tabriklash" inline tugma
+- Callback: `birthday_greetings` insert + guruhga: **"[Tabriklagan] [Tug'ilgan kun egasi]ni tabrikladi! 🎉 Bugun uni N kishi tabrikladi!"**
+- Profil/dashboard: yillik tabriklar soni ko'rsatkichi
+
+### B2. Shajara JSON Eksport
+
+- `src/server/tree.functions.ts` — `exportFamilyTreeJson(familyId)`:
+  - A'zolar (full_name, birth_date, gender, photo_url, telefon **faqat private bo'lmasa**)
+  - Aloqalar
+  - Faqat `admin`/`superadmin` (server-side rol tekshiruvi)
+- Fayl nomi: `shajara_<family_slug>_<YYYY-MM-DD>.json`
+- `dashboard.tree.tsx` — "JSON yuklab olish" tugmasi
+
+---
+
+## SPRINT C — Bosqich 3 va Xavfsizlik
+
+### C1. Yillik Nominatsiyalar
+- DB: `nominations (family_id, year, category, winner_member_id, score, created_at)` + `nomination_category` enum
+- Cron: **1-yanvar 00:00** (PDF tuzatishi — yil yakuni)
+- Kategoriyalar va manbai:
+  - "Eng faol" → `messages_stats` 1 yillik sum
+  - "Oila tayanchi" → `/yordam` javoblari
+  - "Yil quvonchi" → `sentiment_score` (C6)
+  - "Eng yaxshi tabriklovchi" → `birthday_greetings` count
+- Guruhga chiroyli e'lon, dashboard "Awards" sahifasi, profilga medal ikonkasi
+
+### C2. Xotiralar Arxivi
+- DB: `memories (id, family_id, telegram_file_id, media_type, caption, tagged_member_ids bigint[], created_by, created_at)` — PDF tavsiyasi: `storage_url` olib tashlanadi
+- Bot: guruh media + `#xotira` → DB ga
+- `dashboard.memories.tsx` — galereya, sana/a'zo filter, izoh, admin o'chirish
+
+### C3. DB Backup
+- **PDF tavsiyasi: pg_dump afzal.** Worker'da `pg_dump` ishlamaydi, shuning uchun:
+  - **Birinchi versiya:** asosiy jadvallarning JSON dump (kun davomida o'zgargan, ≤10MB)
+  - **Hujjatlash:** to'liq `pg_dump` uchun tashqi cron (GitHub Actions / Supabase'ning o'z backup) tavsiyasi README'ga
+- `family_settings.backup_telegram_chat_id` + `family_settings.backup_frequency` (daily/weekly)
+- `/api/public/cron/db-backup` — service role bilan dump → `sendDocument`
+
+### C4. Log + Admin notification kanallar
+- `family_settings.log_channel_id`, `admin_notification_channel_id`
+- `logToChannel(familyId, level, text)` — `info|warning|error|audit` darajalar
+- Admin DM fallback (PDF tavsiyasi)
+
+### C5. Gender / kengaytirilgan targeting
+- `bot_broadcasts.target` enum: + `females`, `males`, `parents`, `age_18_30` h.k.
+- `sendBroadcast` filter mantiqi
+- Yuborilgan/ko'rilgan stat (basic delivery count)
+
+### C6. Sentiment scoring
+- Lovable AI `google/gemini-2.5-flash-lite` batch (kunlik cron)
+- `messages_stats.sentiment_score real` qo'shish
+- Dashboard: oila kayfiyat grafigi (recharts line)
+- Maxfiylik eslatmasi settings'da
+
+### C7. Rate limiting
+- DB: `rate_limit_log (telegram_id, family_id, window_start, count)` (Redis o'rniga DB — workerda Redis yo'q)
+- 60s > 30 update → 5 daqiqa blok + foydalanuvchiga ogohlantirish + adminga signal
+- Global + oila darajasida
+
+### C8. 2FA (ixtiyoriy)
+- Supabase Auth MFA (TOTP) yoqish
+- `dashboard.settings.tsx` — "2FA yoqish" sahifasi
+- Superadminlar uchun majburiy qilish opsiyasi
+- Recovery codes ko'rsatish
+
+---
+
+## Bajarish tartibi
+
+Sprint A → ko'rsataman → Sprint B → ko'rsataman → Sprint C (C1-C4 birinchi to'lqin, keyin C5-C8).
+
+Tasdiqlasangiz, **Sprint A** dan boshlayman.

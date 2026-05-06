@@ -91,6 +91,44 @@ export async function forwardMessage(chatId: number | string, fromChatId: number
   return tgCall("forwardMessage", { chat_id: chatId, from_chat_id: fromChatId, message_id: messageId });
 }
 
+export async function getFile(fileId: string) {
+  return tgCall<{ file_id: string; file_path: string }>("getFile", { file_id: fileId });
+}
+
+export async function downloadFile(filePath: string): Promise<Blob> {
+  const { lovable, tg } = getCreds();
+  const res = await fetch(`${GATEWAY_URL}/file/${filePath}`, {
+    headers: { Authorization: `Bearer ${lovable}`, "X-Connection-Api-Key": tg },
+  });
+  if (!res.ok) throw new Error(`File download failed [${res.status}]`);
+  return await res.blob();
+}
+
+async function tgMultipart(method: string, fields: Record<string, string | number>, file: { field: string; blob: Blob; filename: string }) {
+  const { lovable, tg } = getCreds();
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(fields)) fd.append(k, String(v));
+  fd.append(file.field, file.blob, file.filename);
+  const res = await fetch(`${GATEWAY_URL}/${method}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${lovable}`, "X-Connection-Api-Key": tg },
+    body: fd,
+  });
+  const data: any = await res.json();
+  if (!res.ok || data.ok === false) throw new Error(`Telegram ${method} failed [${res.status}]: ${JSON.stringify(data)}`);
+  return data.result;
+}
+
+export async function sendPhotoBlob(chatId: number | string, blob: Blob, caption?: string, parseMode: "HTML" | "Markdown" = "HTML") {
+  return tgMultipart("sendPhoto", { chat_id: chatId, ...(caption ? { caption, parse_mode: parseMode } : {}) }, { field: "photo", blob, filename: "photo.jpg" });
+}
+export async function sendVideoBlob(chatId: number | string, blob: Blob, caption?: string, parseMode: "HTML" | "Markdown" = "HTML") {
+  return tgMultipart("sendVideo", { chat_id: chatId, ...(caption ? { caption, parse_mode: parseMode } : {}) }, { field: "video", blob, filename: "video.mp4" });
+}
+export async function sendDocumentBlob(chatId: number | string, blob: Blob, filename: string, caption?: string, parseMode: "HTML" | "Markdown" = "HTML") {
+  return tgMultipart("sendDocument", { chat_id: chatId, ...(caption ? { caption, parse_mode: parseMode } : {}) }, { field: "document", blob, filename });
+}
+
 export async function restrictChatMember(chatId: number | string, userId: number, untilDate?: number) {
   return tgCall("restrictChatMember", {
     chat_id: chatId, user_id: userId,
