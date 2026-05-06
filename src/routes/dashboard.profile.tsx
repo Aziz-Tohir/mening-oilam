@@ -152,7 +152,7 @@ function ProfilePage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 flex-wrap">
           <h1 className="text-2xl font-bold">Mening profilim</h1>
-          <CacheStatus ts={ts} stale={stale} loading={loading && !data} />
+          <CacheStatus ts={ts} stale={stale} loading={loading && !data} onRefresh={() => { invalidateCache("profile:"); refetch(); }} />
         </div>
         {memberships.length > 1 && (
           <Select value={activeId} onValueChange={setActiveId}>
