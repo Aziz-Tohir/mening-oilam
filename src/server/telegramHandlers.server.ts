@@ -184,6 +184,58 @@ async function handleAvatarPhoto(userId: number, msg: TgMessage) {
   );
 }
 
+async function handleAvatarConfirm(cb: TgCallback, data: string) {
+  const [action, pendingId] = data.split(":");
+  const db = getAdminDb();
+  const { data: pending } = await db
+    .from("pending_avatar_uploads")
+    .select("id, telegram_id, file_id")
+    .eq("id", pendingId)
+    .maybeSingle();
+
+  if (!pending || pending.telegram_id !== cb.from.id) {
+    await answerCallbackQuery(cb.id, "Topilmadi yoki muddati tugagan");
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, "⌛️ Muddati tugagan.");
+    return;
+  }
+
+  await db.from("pending_avatar_uploads").delete().eq("id", pendingId);
+
+  if (action === "avno") {
+    await answerCallbackQuery(cb.id, "Bekor qilindi");
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, "❌ Profil rasmi o'zgartirilmadi.");
+    return;
+  }
+
+  const { data: members } = await db
+    .from("family_members")
+    .select("id, user_id")
+    .eq("telegram_id", cb.from.id)
+    .eq("status", "active");
+
+  if (!members || members.length === 0) {
+    await answerCallbackQuery(cb.id, "Oila topilmadi");
+    return;
+  }
+
+  await answerCallbackQuery(cb.id, "Yangilanmoqda…");
+  try {
+    const { setMemberAvatarFromTelegramFile } = await import("./avatar.server");
+    for (const m of members) {
+      await setMemberAvatarFromTelegramFile({
+        fileId: pending.file_id,
+        memberId: m.id,
+        telegramId: cb.from.id,
+        userId: m.user_id,
+      });
+    }
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, `✅ Profil rasmingiz yangilandi (${members.length} oilada).`);
+  } catch (e) {
+    console.error("[bot] avatar upload failed", e);
+    if (cb.message) await editMessageTextSafe(cb.message.chat.id, cb.message.message_id, "❌ Rasmni saqlab bo'lmadi.");
+  }
+}
+
 // ---------- /start welcome message ----------
 async function sendWelcome(userId: number) {
   const text = [
