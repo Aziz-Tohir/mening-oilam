@@ -135,6 +135,7 @@ async function handleMessage(msg: TgMessage) {
               actor_telegram_id: u.id,
               details: { chat_id: msg.chat.id, username: u.username ?? null, full_name: fullName(u) },
             });
+            await postLog(family.id, "moderation", `🔇 Tasdiqlanmagan a'zo mute qilindi: <code>${u.id}</code> ${fullName(u)}`);
           } catch (e) {
             console.warn("[bot] failed to mute new member", u.id, e);
           }
