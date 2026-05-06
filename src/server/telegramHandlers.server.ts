@@ -698,6 +698,42 @@ async function handleCallback(cb: TgCallback) {
     return;
   }
 
+  if (data.startsWith("lang:")) {
+    const newLang = data.split(":")[1] as Lang;
+    await db.from("profiles").update({ language: newLang } as any).eq("telegram_id", cb.from.id);
+    await answerCallbackQuery(cb.id, t("lang_set", newLang));
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    await sendStartFlow(cb.from.id, cb.from);
+    return;
+  }
+
+  if (data === "wiz:newfam") {
+    await setSession(cb.from.id, "newfam_name", {});
+    await answerCallbackQuery(cb.id);
+    const lang = await getUserLang(db, cb.from.id);
+    await sendMessage(cb.from.id, t("create_ask_name", lang), { parse_mode: "HTML" });
+    return;
+  }
+  if (data === "wiz:joinfam") {
+    await answerCallbackQuery(cb.id);
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    // Reuse legacy family-picker flow
+    const { data: families } = await db.from("families").select("id, name, telegram_group_id").not("telegram_group_id", "is", null);
+    if (!families || families.length === 0) {
+      const lang = await getUserLang(db, cb.from.id);
+      await sendMessage(cb.from.id, t("no_families", lang));
+      return;
+    }
+    if (families.length === 1) {
+      await startJoinRequest(cb.from.id, cb.from, families[0].id, families[0].name);
+      return;
+    }
+    await sendMessage(cb.from.id, "Qaysi oilaga qo'shilmoqchisiz?", {
+      reply_markup: { inline_keyboard: families.map(f => [{ text: f.name, callback_data: `pickfam:${f.id}` }]) },
+    });
+    return;
+  }
+
   await answerCallbackQuery(cb.id);
 }
 
