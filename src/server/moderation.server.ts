@@ -1,6 +1,7 @@
 // Group message moderation logic
 import { getAdminDb } from "./db.server";
 import { deleteMessage, sendMessage, banChatMember, restrictChatMember } from "./telegram.server";
+import { postLog } from "./logChannel.server";
 
 const URL_REGEX = /(https?:\/\/[^\s]+|t\.me\/[^\s]+|@[A-Za-z0-9_]{4,})/i;
 
