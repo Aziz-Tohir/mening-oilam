@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAdminDb } from "./db.server";
 import { sendMessage, banChatMember, unbanChatMember, restrictChatMember } from "./telegram.server";
+import { postLog } from "./logChannel.server";
 
 export const listBannedWords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
