@@ -105,6 +105,29 @@ function SettingsPage() {
         </Card>
 
         <Card>
+          <CardHeader><CardTitle>Taklif havolasi</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {inviteLink ? (
+              <>
+                <Label className="text-sm text-muted-foreground">Bu havolani yuborgan kishi to'g'ridan-to'g'ri shu oilaga so'rov yuboradi.</Label>
+                <div className="flex gap-2">
+                  <Input readOnly value={inviteLink} onFocus={(e) => e.currentTarget.select()} />
+                  <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(inviteLink); toast.success("Nusxalandi"); }}>Nusxa</Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <code className="text-xs text-muted-foreground">{invite?.invite_code}</code>
+                  <Button size="sm" variant="secondary" onClick={regenInvite}>Yangi kod</Button>
+                </div>
+              </>
+            ) : invite && !invite.bot_username ? (
+              <p className="text-sm text-muted-foreground">BOT_USERNAME sozlanmagan.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Yuklanmoqda…</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle>Xususiyatlar</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <Row label="Tug'ilgan kun eslatmalari"><Switch checked={!!settings.feature_birthdays} onCheckedChange={(v) => save({ feature_birthdays: v })} /></Row>
