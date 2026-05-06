@@ -34,6 +34,7 @@ export async function sendMessage(chatId: number | string, text: string, options
   parse_mode?: "HTML" | "Markdown" | "MarkdownV2";
   reply_to_message_id?: number;
   disable_notification?: boolean;
+  message_thread_id?: number;
 }) {
   return tgCall("sendMessage", { chat_id: chatId, text, ...options });
 }
