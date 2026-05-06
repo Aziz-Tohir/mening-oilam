@@ -899,7 +899,7 @@ async function handleHelpRequest(userId: number, from: TgUser | undefined, messa
 }
 
 function escapeHtml(s: string) {
-
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 async function handleBirthdayGreeting(cb: TgCallback, memberId: string) {
