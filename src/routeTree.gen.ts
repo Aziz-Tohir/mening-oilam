@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
 import { Route as DashboardUpdatesRouteImport } from './routes/dashboard.updates'
 import { Route as DashboardTreeRouteImport } from './routes/dashboard.tree'
+import { Route as DashboardStatsRouteImport } from './routes/dashboard.stats'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
@@ -25,6 +26,7 @@ import { Route as DashboardBotRouteImport } from './routes/dashboard.bot'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/telegram/poll'
 import { Route as ApiPublicTelegramMiniappAuthRouteImport } from './routes/api/public/telegram/miniapp-auth'
+import { Route as ApiPublicCronProcessJoinRequestsRouteImport } from './routes/api/public/cron/process-join-requests'
 import { Route as ApiPublicCronDailyRemindersRouteImport } from './routes/api/public/cron/daily-reminders'
 
 const LoginRoute = LoginRouteImport.update({
@@ -55,6 +57,11 @@ const DashboardUpdatesRoute = DashboardUpdatesRouteImport.update({
 const DashboardTreeRoute = DashboardTreeRouteImport.update({
   id: '/tree',
   path: '/tree',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardStatsRoute = DashboardStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
@@ -109,6 +116,12 @@ const ApiPublicTelegramMiniappAuthRoute =
     path: '/api/public/telegram/miniapp-auth',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronProcessJoinRequestsRoute =
+  ApiPublicCronProcessJoinRequestsRouteImport.update({
+    id: '/api/public/cron/process-join-requests',
+    path: '/api/public/cron/process-join-requests',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronDailyRemindersRoute =
   ApiPublicCronDailyRemindersRouteImport.update({
     id: '/api/public/cron/daily-reminders',
@@ -127,10 +140,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
+  '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -145,10 +160,12 @@ export interface FileRoutesByTo {
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
+  '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -165,10 +182,12 @@ export interface FileRoutesById {
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
   '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
+  '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -186,10 +205,12 @@ export interface FileRouteTypes {
     | '/dashboard/profile'
     | '/dashboard/requests'
     | '/dashboard/settings'
+    | '/dashboard/stats'
     | '/dashboard/tree'
     | '/dashboard/updates'
     | '/dashboard/'
     | '/api/public/cron/daily-reminders'
+    | '/api/public/cron/process-join-requests'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -204,10 +225,12 @@ export interface FileRouteTypes {
     | '/dashboard/profile'
     | '/dashboard/requests'
     | '/dashboard/settings'
+    | '/dashboard/stats'
     | '/dashboard/tree'
     | '/dashboard/updates'
     | '/dashboard'
     | '/api/public/cron/daily-reminders'
+    | '/api/public/cron/process-join-requests'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -223,10 +246,12 @@ export interface FileRouteTypes {
     | '/dashboard/profile'
     | '/dashboard/requests'
     | '/dashboard/settings'
+    | '/dashboard/stats'
     | '/dashboard/tree'
     | '/dashboard/updates'
     | '/dashboard/'
     | '/api/public/cron/daily-reminders'
+    | '/api/public/cron/process-join-requests'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -237,6 +262,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiPublicCronDailyRemindersRoute: typeof ApiPublicCronDailyRemindersRoute
+  ApiPublicCronProcessJoinRequestsRoute: typeof ApiPublicCronProcessJoinRequestsRoute
   ApiPublicTelegramMiniappAuthRoute: typeof ApiPublicTelegramMiniappAuthRoute
   ApiPublicTelegramPollRoute: typeof ApiPublicTelegramPollRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
@@ -284,6 +310,13 @@ declare module '@tanstack/react-router' {
       path: '/tree'
       fullPath: '/dashboard/tree'
       preLoaderRoute: typeof DashboardTreeRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/stats': {
+      id: '/dashboard/stats'
+      path: '/stats'
+      fullPath: '/dashboard/stats'
+      preLoaderRoute: typeof DashboardStatsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/settings': {
@@ -356,6 +389,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramMiniappAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/process-join-requests': {
+      id: '/api/public/cron/process-join-requests'
+      path: '/api/public/cron/process-join-requests'
+      fullPath: '/api/public/cron/process-join-requests'
+      preLoaderRoute: typeof ApiPublicCronProcessJoinRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/daily-reminders': {
       id: '/api/public/cron/daily-reminders'
       path: '/api/public/cron/daily-reminders'
@@ -374,6 +414,7 @@ interface DashboardRouteChildren {
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardRequestsRoute: typeof DashboardRequestsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardStatsRoute: typeof DashboardStatsRoute
   DashboardTreeRoute: typeof DashboardTreeRoute
   DashboardUpdatesRoute: typeof DashboardUpdatesRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
@@ -387,6 +428,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardRequestsRoute: DashboardRequestsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardStatsRoute: DashboardStatsRoute,
   DashboardTreeRoute: DashboardTreeRoute,
   DashboardUpdatesRoute: DashboardUpdatesRoute,
   DashboardIndexRoute: DashboardIndexRoute,
@@ -401,6 +443,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiPublicCronDailyRemindersRoute: ApiPublicCronDailyRemindersRoute,
+  ApiPublicCronProcessJoinRequestsRoute: ApiPublicCronProcessJoinRequestsRoute,
   ApiPublicTelegramMiniappAuthRoute: ApiPublicTelegramMiniappAuthRoute,
   ApiPublicTelegramPollRoute: ApiPublicTelegramPollRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,

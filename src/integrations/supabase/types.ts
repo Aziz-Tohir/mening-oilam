@@ -285,6 +285,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          invite_code: string
           name: string
           owner_user_id: string
           telegram_group_id: number | null
@@ -294,6 +295,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          invite_code?: string
           name: string
           owner_user_id: string
           telegram_group_id?: number | null
@@ -303,6 +305,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          invite_code?: string
           name?: string
           owner_user_id?: string
           telegram_group_id?: number | null
@@ -609,6 +612,33 @@ export type Database = {
           issued_by_user_id?: string | null
           member_id?: string
           reason?: string
+          telegram_id?: number | null
+        }
+        Relationships: []
+      }
+      messages_stats: {
+        Row: {
+          family_id: string
+          id: number
+          member_id: string | null
+          message_date: string
+          messages_count: number
+          telegram_id: number | null
+        }
+        Insert: {
+          family_id: string
+          id?: number
+          member_id?: string | null
+          message_date: string
+          messages_count?: number
+          telegram_id?: number | null
+        }
+        Update: {
+          family_id?: string
+          id?: number
+          member_id?: string | null
+          message_date?: string
+          messages_count?: number
           telegram_id?: number | null
         }
         Relationships: []

@@ -1,0 +1,1 @@
+ALTER TABLE public.families ALTER COLUMN invite_code SET DEFAULT upper(substr(md5(gen_random_uuid()::text), 1, 8));

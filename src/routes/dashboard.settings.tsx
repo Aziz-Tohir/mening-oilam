@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listMyFamilies } from "@/server/families.functions";
+import { listMyFamilies, regenerateInviteCode, getInviteInfo } from "@/server/families.functions";
 import { getSettings, updateSettings } from "@/server/admin.functions";
 import { callServer } from "@/lib/serverCall";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ function SettingsPage() {
   const [families, setFamilies] = useState<any[]>([]);
   const [familyId, setFamilyId] = useState<string>("");
   const [settings, setSettings] = useState<any>(null);
+  const [invite, setInvite] = useState<{ invite_code: string | null; bot_username: string | null } | null>(null);
 
   useEffect(() => {
     callServer(listMyFamilies)
@@ -26,10 +27,27 @@ function SettingsPage() {
       .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
   }, []);
   useEffect(() => {
-    if (familyId) callServer(getSettings, { familyId })
-      .then(r => setSettings(r.settings))
-      .catch((e: any) => toast.error(e?.message ?? "Sozlamalarni yuklab bo'lmadi"));
+    if (familyId) {
+      callServer(getSettings, { familyId })
+        .then(r => setSettings(r.settings))
+        .catch((e: any) => toast.error(e?.message ?? "Sozlamalarni yuklab bo'lmadi"));
+      callServer(getInviteInfo, { familyId })
+        .then(r => setInvite(r))
+        .catch(() => {});
+    }
   }, [familyId]);
+
+  const regenInvite = async () => {
+    try {
+      const r = await callServer(regenerateInviteCode, { familyId });
+      setInvite(prev => ({ invite_code: r.invite_code, bot_username: prev?.bot_username ?? null }));
+      toast.success("Yangi taklif kodi yaratildi");
+    } catch (e: any) { toast.error(e?.message ?? "Xato"); }
+  };
+
+  const inviteLink = invite?.bot_username && invite?.invite_code
+    ? `https://t.me/${invite.bot_username}?start=fam_${invite.invite_code}`
+    : null;
 
   const save = async (patch: any) => {
     setSettings({ ...settings, ...patch });
@@ -83,6 +101,29 @@ function SettingsPage() {
                 onBlur={(e) => save({ join_request_auto_reject_timeout_hours: Number(e.target.value) })}
                 onChange={(e) => setSettings({ ...settings, join_request_auto_reject_timeout_hours: Number(e.target.value) })} />
             </Row>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Taklif havolasi</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {inviteLink ? (
+              <>
+                <Label className="text-sm text-muted-foreground">Bu havolani yuborgan kishi to'g'ridan-to'g'ri shu oilaga so'rov yuboradi.</Label>
+                <div className="flex gap-2">
+                  <Input readOnly value={inviteLink} onFocus={(e) => e.currentTarget.select()} />
+                  <Button variant="outline" onClick={() => { navigator.clipboard?.writeText(inviteLink); toast.success("Nusxalandi"); }}>Nusxa</Button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <code className="text-xs text-muted-foreground">{invite?.invite_code}</code>
+                  <Button size="sm" variant="secondary" onClick={regenInvite}>Yangi kod</Button>
+                </div>
+              </>
+            ) : invite && !invite.bot_username ? (
+              <p className="text-sm text-muted-foreground">BOT_USERNAME sozlanmagan.</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Yuklanmoqda…</p>
+            )}
           </CardContent>
         </Card>
 

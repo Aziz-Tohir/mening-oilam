@@ -14,6 +14,15 @@ async function alreadySent(db: ReturnType<typeof getAdminDb>, kind: string, ref_
   return !!data;
 }
 
+function isQuietNow(start: string | null, end: string | null, now: Date): boolean {
+  if (!start || !end) return false;
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  const cur = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const s = sh * 60 + sm, e = eh * 60 + em;
+  return s <= e ? (cur >= s && cur < e) : (cur >= s || cur < e);
+}
+
 async function processFamily(db: ReturnType<typeof getAdminDb>, family: any, today: Date) {
   const todayISO = today.toISOString().slice(0, 10);
 
@@ -99,10 +108,20 @@ async function handle(request: Request) {
   const { data: families } = await db.from("families").select("id, name, telegram_group_id");
   const today = new Date();
   let processed = 0;
+  let skipped = 0;
   for (const fam of families ?? []) {
-    try { await processFamily(db, fam, today); processed++; } catch (e) { console.error("family err", fam.id, e); }
+    try {
+      const { data: settings } = await db.from("family_settings")
+        .select("quiet_hours_start, quiet_hours_end")
+        .eq("family_id", fam.id).maybeSingle();
+      if (settings && isQuietNow((settings as any).quiet_hours_start, (settings as any).quiet_hours_end, today)) {
+        skipped++; continue;
+      }
+      await processFamily(db, fam, today);
+      processed++;
+    } catch (e) { console.error("family err", fam.id, e); }
   }
-  return Response.json({ ok: true, families: processed });
+  return Response.json({ ok: true, families: processed, skipped });
 }
 
 export const Route = createFileRoute("/api/public/cron/daily-reminders")({

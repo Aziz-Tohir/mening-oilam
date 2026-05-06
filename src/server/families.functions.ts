@@ -84,3 +84,25 @@ export const getFamilyStats = createServerFn({ method: "POST" })
       relationships: relationships.count ?? 0,
     };
   });
+
+export const regenerateInviteCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const code = Array.from({ length: 8 }, () =>
+      "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]
+    ).join("");
+    const { error } = await supabase.from("families").update({ invite_code: code } as never).eq("id", data.familyId);
+    if (error) throw new Error(error.message);
+    return { invite_code: code };
+  });
+
+export const getInviteInfo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: fam } = await supabase.from("families").select("invite_code").eq("id", data.familyId).maybeSingle();
+    return { invite_code: (fam as any)?.invite_code ?? null, bot_username: process.env.BOT_USERNAME ?? null };
+  });
