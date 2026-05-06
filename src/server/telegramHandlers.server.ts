@@ -14,6 +14,7 @@ import {
   sendVideoBlob,
   sendDocumentBlob,
 } from "./telegram.server";
+import { postLog } from "./logChannel.server";
 import { t, getUserLang, type Lang } from "./i18n.server";
 import { RELATIONSHIP_OPTIONS, relationshipLabel } from "@/lib/relationships";
 import { calculateKinship, type EdgeRow } from "@/lib/kinship";
@@ -134,6 +135,7 @@ async function handleMessage(msg: TgMessage) {
               actor_telegram_id: u.id,
               details: { chat_id: msg.chat.id, username: u.username ?? null, full_name: fullName(u) },
             });
+            await postLog(family.id, "moderation", `🔇 Tasdiqlanmagan a'zo mute qilindi: <code>${u.id}</code> ${fullName(u)}`);
           } catch (e) {
             console.warn("[bot] failed to mute new member", u.id, e);
           }
@@ -532,6 +534,7 @@ async function handleForeignBotMessage(msg: TgMessage, familyId: string, repostE
       family_id: familyId, action: "foreign_media_reposted",
       details: { kind, original_bot: (msg as any).from?.username },
     });
+    await postLog(familyId, "actions", `♻️ Begona bot mediasi qayta yuborildi (${kind})`);
   } catch (e) {
     console.warn("[bot] foreign media repost failed, fallback to delete", e);
     await deleteMessage(msg.chat.id, msg.message_id);
@@ -843,6 +846,7 @@ export async function approveJoinRequest(req: any) {
     action: "join_request_approved",
     details: { request_id: req.id, applicant: req.applicant_telegram_id },
   });
+  await postLog(req.family_id, "admin", `✅ Qo'shilish so'rovi tasdiqlandi: <b>${req.applicant_full_name ?? req.applicant_telegram_id}</b>`);
 }
 
 async function notifyFamilyAdmins(familyId: string, requestId: string, req: any, relType: string, confirmer: TgUser) {
@@ -876,6 +880,7 @@ async function notifyFamilyAdmins(familyId: string, requestId: string, req: any,
       console.warn("[bot] notify admin failed", m.telegram_id, e);
     }
   }
+  await postLog(familyId, "admin", `🔔 Yangi qo'shilish so'rovi:\n${text}`);
 }
 
 async function isTelegramAdminOfFamily(familyId: string, telegramId: number): Promise<boolean> {
@@ -919,6 +924,7 @@ async function handleHelpRequest(userId: number, from: TgUser | undefined, messa
         family_id: m.family_id, actor_telegram_id: userId,
         action: "help_request", details: { text },
       });
+      await postLog(m.family_id, "admin", `🆘 Yordam so'rovi: <b>${name}</b>\n${body}`);
     } catch (e) { console.warn("[bot] /yordam failed", e); }
   }
   await sendMessage(userId, sent > 0 ? `✅ Yordam so'rovingiz ${sent} ta guruhga yuborildi.` : "Guruh topilmadi.");

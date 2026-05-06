@@ -479,6 +479,10 @@ export type Database = {
           join_request_auto_reject_timeout_hours: number
           language: string
           log_telegram_chat_id: number | null
+          log_topic_actions: number | null
+          log_topic_admin: number | null
+          log_topic_backup: number | null
+          log_topic_moderation: number | null
           manage_foreign_bot_media: boolean
           max_warnings: number
           quiet_hours_end: string | null
@@ -508,6 +512,10 @@ export type Database = {
           join_request_auto_reject_timeout_hours?: number
           language?: string
           log_telegram_chat_id?: number | null
+          log_topic_actions?: number | null
+          log_topic_admin?: number | null
+          log_topic_backup?: number | null
+          log_topic_moderation?: number | null
           manage_foreign_bot_media?: boolean
           max_warnings?: number
           quiet_hours_end?: string | null
@@ -537,6 +545,10 @@ export type Database = {
           join_request_auto_reject_timeout_hours?: number
           language?: string
           log_telegram_chat_id?: number | null
+          log_topic_actions?: number | null
+          log_topic_admin?: number | null
+          log_topic_backup?: number | null
+          log_topic_moderation?: number | null
           manage_foreign_bot_media?: boolean
           max_warnings?: number
           quiet_hours_end?: string | null

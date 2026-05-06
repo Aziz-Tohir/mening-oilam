@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAdminDb } from "./db.server";
+import { postLog } from "./logChannel.server";
 
 export const listMembers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -60,6 +61,7 @@ export const setMemberStatus = createServerFn({ method: "POST" })
       action: "member_status_changed",
       details: { member_id: data.memberId, status: data.status },
     });
+    await postLog(data.familyId, "actions", `👤 A'zo statusi: <code>${data.memberId}</code> → <b>${data.status}</b>`);
     return { ok: true };
   });
 

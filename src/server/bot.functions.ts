@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAdminDb } from "./db.server";
 import { sendMessage, banChatMember, unbanChatMember, restrictChatMember } from "./telegram.server";
+import { postLog } from "./logChannel.server";
 
 export const listBannedWords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -65,6 +66,7 @@ export const addWarning = createServerFn({ method: "POST" })
     if (m?.telegram_id) {
       try { await sendMessage(m.telegram_id, `⚠️ Sizga ogohlantirish berildi: ${data.reason}`); } catch {}
     }
+    await postLog(data.familyId, "moderation", `⚠️ Ogohlantirish: <b>${m?.full_name ?? data.memberId}</b>\nSabab: ${data.reason}`);
     return { ok: true };
   });
 
@@ -103,6 +105,7 @@ export const moderateMember = createServerFn({ method: "POST" })
       family_id: data.familyId, actor_user_id: context.userId,
       action: `moderate_${data.action}`, details: { member_id: data.memberId, telegram_id: uid },
     });
+    await postLog(data.familyId, "moderation", `🛡️ Moderatsiya: <b>${data.action}</b>\nA'zo: <code>${uid}</code> (${member.full_name ?? "?"})`);
     return { ok: true };
   });
 
@@ -136,6 +139,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
       sent_by_user_id: context.userId, recipients_count: recipients, failures_count: failures,
       gender_filter: data.genderFilter === "all" ? null : data.genderFilter,
     } as any);
+    await postLog(data.familyId, "actions", `📣 Broadcast (${data.target}, ${data.genderFilter}): ${recipients} ✓ / ${failures} ✗`);
     return { recipients, failures };
   });
 
