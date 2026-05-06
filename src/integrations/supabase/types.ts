@@ -168,6 +168,7 @@ export type Database = {
           created_at: string
           failures_count: number
           family_id: string
+          gender_filter: string | null
           id: string
           message_text: string
           recipients_count: number
@@ -178,6 +179,7 @@ export type Database = {
           created_at?: string
           failures_count?: number
           family_id: string
+          gender_filter?: string | null
           id?: string
           message_text: string
           recipients_count?: number
@@ -188,6 +190,7 @@ export type Database = {
           created_at?: string
           failures_count?: number
           family_id?: string
+          gender_filter?: string | null
           id?: string
           message_text?: string
           recipients_count?: number
@@ -457,10 +460,13 @@ export type Database = {
       }
       family_settings: {
         Row: {
+          admin_notification_channel_id: number | null
           allowed_link_domains: string[]
           anti_flood_seconds: number
           anti_forward: boolean
           anti_link: boolean
+          backup_frequency: string
+          backup_telegram_chat_id: number | null
           birthday_notify_time: string
           delete_join_leave_messages: boolean
           enforce_bot_onboarding: boolean
@@ -472,6 +478,7 @@ export type Database = {
           join_request_auto_approve_timeout_hours: number
           join_request_auto_reject_timeout_hours: number
           language: string
+          log_telegram_chat_id: number | null
           manage_foreign_bot_media: boolean
           max_warnings: number
           quiet_hours_end: string | null
@@ -482,10 +489,13 @@ export type Database = {
           welcome_message_auto_delete_seconds: number
         }
         Insert: {
+          admin_notification_channel_id?: number | null
           allowed_link_domains?: string[]
           anti_flood_seconds?: number
           anti_forward?: boolean
           anti_link?: boolean
+          backup_frequency?: string
+          backup_telegram_chat_id?: number | null
           birthday_notify_time?: string
           delete_join_leave_messages?: boolean
           enforce_bot_onboarding?: boolean
@@ -497,6 +507,7 @@ export type Database = {
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
+          log_telegram_chat_id?: number | null
           manage_foreign_bot_media?: boolean
           max_warnings?: number
           quiet_hours_end?: string | null
@@ -507,10 +518,13 @@ export type Database = {
           welcome_message_auto_delete_seconds?: number
         }
         Update: {
+          admin_notification_channel_id?: number | null
           allowed_link_domains?: string[]
           anti_flood_seconds?: number
           anti_forward?: boolean
           anti_link?: boolean
+          backup_frequency?: string
+          backup_telegram_chat_id?: number | null
           birthday_notify_time?: string
           delete_join_leave_messages?: boolean
           enforce_bot_onboarding?: boolean
@@ -522,6 +536,7 @@ export type Database = {
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
+          log_telegram_chat_id?: number | null
           manage_foreign_bot_media?: boolean
           max_warnings?: number
           quiet_hours_end?: string | null
@@ -673,6 +688,51 @@ export type Database = {
         }
         Relationships: []
       }
+      memories: {
+        Row: {
+          caption: string | null
+          created_at: string
+          family_id: string
+          id: string
+          kind: string
+          message_year: number
+          saved_by_member_id: string | null
+          saved_by_telegram_id: number | null
+          source_chat_id: number | null
+          source_message_id: number | null
+          storage_url: string | null
+          telegram_file_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          kind: string
+          message_year?: number
+          saved_by_member_id?: string | null
+          saved_by_telegram_id?: number | null
+          source_chat_id?: number | null
+          source_message_id?: number | null
+          storage_url?: string | null
+          telegram_file_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          kind?: string
+          message_year?: number
+          saved_by_member_id?: string | null
+          saved_by_telegram_id?: number | null
+          source_chat_id?: number | null
+          source_message_id?: number | null
+          storage_url?: string | null
+          telegram_file_id?: string
+        }
+        Relationships: []
+      }
       messages_stats: {
         Row: {
           family_id: string
@@ -680,6 +740,8 @@ export type Database = {
           member_id: string | null
           message_date: string
           messages_count: number
+          sentiment_analyzed_at: string | null
+          sentiment_score: number | null
           telegram_id: number | null
         }
         Insert: {
@@ -688,6 +750,8 @@ export type Database = {
           member_id?: string | null
           message_date: string
           messages_count?: number
+          sentiment_analyzed_at?: string | null
+          sentiment_score?: number | null
           telegram_id?: number | null
         }
         Update: {
@@ -696,7 +760,45 @@ export type Database = {
           member_id?: string | null
           message_date?: string
           messages_count?: number
+          sentiment_analyzed_at?: string | null
+          sentiment_score?: number | null
           telegram_id?: number | null
+        }
+        Relationships: []
+      }
+      nominations: {
+        Row: {
+          category: string
+          created_at: string
+          details: Json | null
+          family_id: string
+          id: string
+          member_id: string | null
+          member_name: string | null
+          metric_value: number | null
+          year: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          details?: Json | null
+          family_id: string
+          id?: string
+          member_id?: string | null
+          member_name?: string | null
+          metric_value?: number | null
+          year: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          details?: Json | null
+          family_id?: string
+          id?: string
+          member_id?: string | null
+          member_name?: string | null
+          metric_value?: number | null
+          year?: number
         }
         Relationships: []
       }

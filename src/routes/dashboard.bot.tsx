@@ -244,6 +244,7 @@ function ActionsTab({ familyId }: { familyId: string }) {
 
 function BroadcastTab({ familyId }: { familyId: string }) {
   const [target, setTarget] = useState<"group"|"members">("group");
+  const [genderFilter, setGenderFilter] = useState<"all"|"male"|"female">("all");
   const [text, setText] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [sending, setSending] = useState(false);
@@ -253,7 +254,7 @@ function BroadcastTab({ familyId }: { familyId: string }) {
     if (!text.trim()) return;
     setSending(true);
     try {
-      const r = await callServer(sendBroadcast, { familyId, target, text });
+      const r = await callServer(sendBroadcast, { familyId, target, text, genderFilter });
       toast.success(`Yuborildi: ${r.recipients}, xato: ${r.failures}`);
       setText(""); reload();
     } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
@@ -264,13 +265,25 @@ function BroadcastTab({ familyId }: { familyId: string }) {
       <Card>
         <CardHeader><CardTitle><MessageSquare className="mr-1 inline h-4 w-4" />Xabar yuborish</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Select value={target} onValueChange={(v) => setTarget(v as any)}>
-            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="group">Guruhga</SelectItem>
-              <SelectItem value="members">Har bir a'zoga DM</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-wrap gap-2">
+            <Select value={target} onValueChange={(v) => setTarget(v as any)}>
+              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="group">Guruhga</SelectItem>
+                <SelectItem value="members">Har bir a'zoga DM</SelectItem>
+              </SelectContent>
+            </Select>
+            {target === "members" && (
+              <Select value={genderFilter} onValueChange={(v) => setGenderFilter(v as any)}>
+                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Barchasiga</SelectItem>
+                  <SelectItem value="male">Faqat erkaklarga</SelectItem>
+                  <SelectItem value="female">Faqat ayollarga</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <Textarea rows={4} value={text} onChange={e => setText(e.target.value)} placeholder="Xabar matnini yozing..." />
           <Button onClick={send} disabled={sending || !text.trim()}>{sending ? "Yuborilmoqda…" : "Yuborish"}</Button>
         </CardContent>

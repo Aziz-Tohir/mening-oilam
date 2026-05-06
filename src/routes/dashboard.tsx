@@ -77,6 +77,7 @@ function DashboardLayout() {
     ["/dashboard/events", "Tadbirlar", false],
     ["/dashboard/tree", "Daraxt", false],
     ["/dashboard/stats", "Statistika", false],
+    ["/dashboard/memories", "Xotiralar", false],
     ["/dashboard/kinship", "Kim kimga?", false],
     ["/dashboard/profile", "Profil", false],
     ["/dashboard/bot", "Bot", true],

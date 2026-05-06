@@ -112,6 +112,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
     familyId: z.string().uuid(),
     target: z.enum(["group","members"]),
     text: z.string().min(1).max(4000),
+    genderFilter: z.enum(["all","male","female"]).default("all"),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const db = getAdminDb();
@@ -121,7 +122,9 @@ export const sendBroadcast = createServerFn({ method: "POST" })
       if (!f?.telegram_group_id) throw new Error("Guruh sozlanmagan");
       try { await sendMessage(f.telegram_group_id, data.text); recipients = 1; } catch { failures = 1; }
     } else {
-      const { data: members } = await context.supabase.from("family_members").select("telegram_id").eq("family_id", data.familyId).eq("status", "active");
+      let q = context.supabase.from("family_members").select("telegram_id, gender").eq("family_id", data.familyId).eq("status", "active");
+      if (data.genderFilter !== "all") q = q.eq("gender", data.genderFilter);
+      const { data: members } = await q;
       for (const m of members ?? []) {
         if (!m.telegram_id) continue;
         try { await sendMessage(m.telegram_id, data.text); recipients++; }
@@ -131,7 +134,8 @@ export const sendBroadcast = createServerFn({ method: "POST" })
     await db.from("bot_broadcasts").insert({
       family_id: data.familyId, target: data.target, message_text: data.text,
       sent_by_user_id: context.userId, recipients_count: recipients, failures_count: failures,
-    });
+      gender_filter: data.genderFilter === "all" ? null : data.genderFilter,
+    } as any);
     return { recipients, failures };
   });
 
