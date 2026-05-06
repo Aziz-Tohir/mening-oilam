@@ -880,6 +880,7 @@ async function notifyFamilyAdmins(familyId: string, requestId: string, req: any,
       console.warn("[bot] notify admin failed", m.telegram_id, e);
     }
   }
+  await postLog(familyId, "admin", `🔔 Yangi qo'shilish so'rovi:\n${text}`);
 }
 
 async function isTelegramAdminOfFamily(familyId: string, telegramId: number): Promise<boolean> {
