@@ -130,6 +130,39 @@ export type Database = {
         }
         Relationships: []
       }
+      birthday_greetings: {
+        Row: {
+          created_at: string
+          family_id: string
+          greeter_name: string | null
+          greeter_telegram_id: number
+          greeting_text: string | null
+          greeting_year: number
+          id: string
+          member_id: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          greeter_name?: string | null
+          greeter_telegram_id: number
+          greeting_text?: string | null
+          greeting_year: number
+          id?: string
+          member_id: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          greeter_name?: string | null
+          greeter_telegram_id?: number
+          greeting_text?: string | null
+          greeting_year?: number
+          id?: string
+          member_id?: string
+        }
+        Relationships: []
+      }
       bot_broadcasts: {
         Row: {
           created_at: string

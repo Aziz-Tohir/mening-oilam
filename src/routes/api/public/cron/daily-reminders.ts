@@ -41,14 +41,15 @@ async function processFamily(db: ReturnType<typeof getAdminDb>, family: any, tod
 
     const age = today.getFullYear() - bd.getFullYear();
     const groupText = `🎂 Bugun *${m.full_name}* ning tug'ilgan kuni! ${age} yoshga to'ldi. Tabriklaymiz! 🎉`;
+    const greetKb = { inline_keyboard: [[{ text: "🎉 Tabriklash", callback_data: `bday:${m.id}` }]] };
 
     if (family.telegram_group_id) {
-      try { await sendMessage(family.telegram_group_id, groupText, { parse_mode: "Markdown" }); } catch (e) { console.error("group bday send", e); }
+      try { await sendMessage(family.telegram_group_id, groupText, { parse_mode: "Markdown", reply_markup: greetKb }); } catch (e) { console.error("group bday send", e); }
     }
-    // DM other active members
+    // DM other active members with greeting button
     for (const other of members ?? []) {
       if (other.id === m.id || !other.telegram_id) continue;
-      try { await sendMessage(other.telegram_id, `Bugun ${m.full_name} ning tug'ilgan kuni 🎂`); } catch {}
+      try { await sendMessage(other.telegram_id, `Bugun ${m.full_name} ning tug'ilgan kuni 🎂`, { reply_markup: greetKb }); } catch {}
     }
     await logSent(db, family.id, "birthday", m.id, todayISO);
   }

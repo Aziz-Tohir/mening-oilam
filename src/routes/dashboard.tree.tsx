@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers, listRelationships, addRelationship } from "@/server/admin.functions";
+import { exportFamilyTreeJson } from "@/server/tree.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
@@ -113,6 +114,18 @@ function TreePage() {
   const [pendingConn, setPendingConn] = useState<{ source: string; target: string } | null>(null);
   const [newRelType, setNewRelType] = useState("father");
   const flowWrap = useRef<HTMLDivElement>(null);
+  const exportJson = async () => {
+    if (!familyId) return;
+    try {
+      const data = await callServer(exportFamilyTreeJson, { familyId });
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `shajara-${familyId.slice(0,8)}-${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success("JSON eksport qilindi");
+    } catch (e: any) { toast.error(e?.message ?? "Eksport xatolik"); }
+  };
 
 
   const { initialNodes, initialEdges } = useMemo(() => {
@@ -215,6 +228,7 @@ function TreePage() {
             Faqat faollar
           </label>
           <Button variant="outline" size="sm" onClick={exportPng}>PNG</Button>
+          <Button variant="outline" size="sm" onClick={exportJson}>JSON</Button>
         </div>
       </div>
 
