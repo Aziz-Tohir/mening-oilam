@@ -104,6 +104,7 @@ export const moderateMember = createServerFn({ method: "POST" })
       family_id: data.familyId, actor_user_id: context.userId,
       action: `moderate_${data.action}`, details: { member_id: data.memberId, telegram_id: uid },
     });
+    await postLog(data.familyId, "moderation", `🛡️ Moderatsiya: <b>${data.action}</b>\nA'zo: <code>${uid}</code> (${member.full_name ?? "?"})`);
     return { ok: true };
   });
 
