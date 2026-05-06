@@ -410,6 +410,7 @@ export type Database = {
           feature_birthdays: boolean
           feature_events: boolean
           feature_stats_public: boolean
+          female_photo_visibility: string
           join_request_auto_approve_timeout_hours: number
           join_request_auto_reject_timeout_hours: number
           language: string
@@ -432,6 +433,7 @@ export type Database = {
           feature_birthdays?: boolean
           feature_events?: boolean
           feature_stats_public?: boolean
+          female_photo_visibility?: string
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
@@ -454,6 +456,7 @@ export type Database = {
           feature_birthdays?: boolean
           feature_events?: boolean
           feature_stats_public?: boolean
+          female_photo_visibility?: string
           join_request_auto_approve_timeout_hours?: number
           join_request_auto_reject_timeout_hours?: number
           language?: string
