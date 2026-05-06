@@ -178,6 +178,32 @@ async function handleMessage(msg: TgMessage) {
           }
         } catch (e) { console.warn("[stats] track failed", e); }
       }
+
+      // Memories — save group media for the family album
+      try {
+        const photo = (msg as any).photo;
+        const video = (msg as any).video;
+        const doc = (msg as any).document;
+        let kind: "photo" | "video" | "document" | null = null;
+        let fileId: string | null = null;
+        if (Array.isArray(photo) && photo.length) { kind = "photo"; fileId = photo[photo.length - 1].file_id; }
+        else if (video?.file_id) { kind = "video"; fileId = video.file_id; }
+        else if (doc?.file_id && (doc.mime_type ?? "").startsWith("image/")) { kind = "document"; fileId = doc.file_id; }
+        if (kind && fileId && msg.from && !msg.from.is_bot) {
+          const { data: mem } = await db.from("family_members")
+            .select("id").eq("family_id", family.id).eq("telegram_id", msg.from.id).maybeSingle();
+          await db.from("memories").insert({
+            family_id: family.id,
+            saved_by_telegram_id: msg.from.id,
+            saved_by_member_id: mem?.id ?? null,
+            kind, telegram_file_id: fileId,
+            caption: (msg as any).caption ?? null,
+            source_chat_id: msg.chat.id,
+            source_message_id: msg.message_id,
+            message_year: new Date().getFullYear(),
+          } as any);
+        }
+      } catch (e) { console.warn("[memories] save failed", e); }
     }
     return;
   }
