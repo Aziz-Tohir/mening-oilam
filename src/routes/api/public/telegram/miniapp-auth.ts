@@ -48,11 +48,47 @@ export const Route = createFileRoute("/api/public/telegram/miniapp-auth")({
         const telegramId = tgUser.id;
 
         // Must be a registered family member
-        const { data: member } = await db
+        let { data: member } = await db
           .from("family_members")
           .select("id, family_id, full_name, status, user_id")
           .eq("telegram_id", telegramId)
           .maybeSingle();
+
+        // Fallback: owner/admin created family via web — link/create family_members row
+        if (!member) {
+          const { data: profByTg } = await db.from("profiles").select("user_id").eq("telegram_id", telegramId).maybeSingle();
+          const profileUserId = (profByTg as any)?.user_id as string | undefined;
+          if (profileUserId) {
+            const { data: ownedFams } = await db.from("families").select("id").eq("owner_user_id", profileUserId).limit(1);
+            let famId = (ownedFams?.[0] as any)?.id as string | undefined;
+            if (!famId) {
+              const { data: roleFams } = await db.from("user_roles").select("family_id").eq("user_id", profileUserId).limit(1);
+              famId = (roleFams?.[0] as any)?.family_id;
+            }
+            if (famId) {
+              const { data: existingFm } = await db.from("family_members")
+                .select("id, family_id, full_name, status, user_id, telegram_id")
+                .eq("family_id", famId).eq("user_id", profileUserId).maybeSingle();
+              if (existingFm) {
+                if ((existingFm as any).telegram_id !== telegramId || (existingFm as any).status !== "active") {
+                  await db.from("family_members").update({ telegram_id: telegramId, status: "active" }).eq("id", (existingFm as any).id);
+                }
+                member = { id: (existingFm as any).id, family_id: famId, full_name: (existingFm as any).full_name, status: "active", user_id: profileUserId } as any;
+              } else {
+                const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ") || `User ${telegramId}`;
+                const { data: inserted } = await db.from("family_members").insert({
+                  family_id: famId,
+                  telegram_id: telegramId,
+                  user_id: profileUserId,
+                  full_name: fullName,
+                  username: tgUser.username ?? null,
+                  status: "active",
+                }).select("id, family_id, full_name, status, user_id").single();
+                member = inserted as any;
+              }
+            }
+          }
+        }
 
         if (!member) {
           return Response.json({

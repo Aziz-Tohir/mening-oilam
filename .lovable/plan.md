@@ -1,72 +1,54 @@
-## A) `src/lib/relationships.ts` — yangi optionlar
-Ro'yxat boshiga qo'shiladi:
-- `{ value: "self", label: "Men (o'zim)" }`
-Va qo'shimcha qarindoshlik turlari:
-- `step_father` — "O'gay otam"
-- `step_mother` — "O'gay onam"
-- `step_son` — "O'gay o'g'lim"
-- `step_daughter` — "O'gay qizim"
-- `half_brother` — "O'gay akam/ukam"
-- `half_sister` — "O'gay opam/singlim"
-- `great_grandfather` — "Buvamning otasi"
-- `great_grandmother` — "Buvamning onasi"
-- `great_grandson` — "Chevaram (o'g'il)"
-- `great_granddaughter` — "Chevaram (qiz)"
-- `godfather` — "Otaxon"
-- `godmother` — "Onaxon"
-- `family_friend` — "Oila do'sti"
+## Muammo
 
-`relationshipLabel()` o'zgarmaydi (avtomatik ishlaydi).
+Web orqali oila yaratganda, foydalanuvchi `families.owner_user_id` va `user_roles`da **superadmin** bo'ladi. Lekin:
+- `profiles.telegram_id` bo'sh bo'lishi mumkin (web login Telegram ID'siz)
+- `family_members.telegram_id` esa shunchaki form'da kiritilgan raqam (egasining haqiqiy Telegram ID'si bilan mos kelmasligi mumkin)
 
-## B) `src/routes/dashboard.members.tsx` — `EditMemberDialog`
+Natijada:
+- **Bot /start** → `family_members WHERE telegram_id = userId` topilmaydi → "yangi user" oqimi ko'rsatiladi (a'zosiz)
+- **Mini App** → `miniapp-auth.ts:51-62` xuddi shu tekshiruv → **403 not_registered** → "Avval botda /start bosib oilaga qo'shilishingiz kerak"
 
-### 1) Jins tanlanmaslik bug'i
-Hozirgi `Select` `value=""` qabul qilmaydi (Radix bo'sh stringga ruxsat bermaydi → boshlang'ich qiymat ko'rinmaydi). Yechim: `value={form.gender || undefined}` qilib uzatish va "Tanlanmagan"ni placeholder sifatida qoldirish. Xuddi shu yondashuv `relationship_to_inviter` uchun ham qo'llanadi.
+DB tasdiqladi: `Usmonovlar` oilasi, owner `Tohirjon Odilov` (tg=1633746526), lekin `profiles.telegram_id = NULL` → bog'lanish uzilgan.
 
-### 2) Real-time validatsiya
-Yangi lokal `errors` state (`Record<string,string>`) + har bir maydon `onChange`da tekshiriladi. `Saqlash` tugmasi `Object.keys(errors).length>0` bo'lsa disabled.
+## A) `src/server/telegramHandlers.server.ts` — `sendStartFlow` (≈396)
 
-Qoidalar:
-- **full_name**: trim, 2–128 belgi → "Kamida 2 ta belgi"
-- **username**: bo'sh yoki `^[A-Za-z0-9_]{3,32}$` → "Faqat harf/raqam/_ (3–32)"
-- **phone**: bo'sh yoki `^\+?[0-9 ()\-]{7,20}$`, normalize qilingan raqamlar 7–15 ta → "Telefon noto'g'ri (masalan +998901234567)"
-- **birth_date**:
-  - kelajakdagi sana emas → "Kelajakdagi sana bo'lmasin"
-  - 1900-yildan keyin → "Sana juda eski"
-  - yosh > 130 → "Sana mantiqsiz"
-- **bio**: ≤1000 belgi (counter ko'rsatiladi)
+`family_members.telegram_id` bo'yicha topilmasa, qo'shimcha tekshiruv:
+1. `profiles WHERE telegram_id = userId` → `profileUserId` olinadi
+2. Agar profil mavjud bo'lsa: `families.owner_user_id = profileUserId` va `user_roles.user_id = profileUserId` orqali oilalarni topiladi
+3. Topilganlar uchun `family_members` qatori yo'q bo'lsa — yaratiladi (`status:'active'`); bor bo'lsa-yu `telegram_id` boshqa — `telegram_id`ni haqiqiysiga yangilanadi (auto-link)
+4. Birlashtirilgan ro'yxat bo'sh emas bo'lsa — `already_member` xabari
 
-Har bir input ostida xato matni qizil rangda (`text-destructive text-xs`) ko'rsatiladi, input `aria-invalid` bilan belgilanadi.
+## B) `src/routes/api/public/telegram/miniapp-auth.ts` — same logic
 
-### 3) Rasm preview va meta
-`handleFile`da yuklashdan **oldin**:
-- `URL.createObjectURL(file)` — original preview
-- `processImageForUpload(file)` natijasidan WebP/PNG blob yaratiladi va `URL.createObjectURL(blob)` orqali yangi preview
-- Pending state: `{ originalUrl, processedUrl, originalSize, processedSize, w, h, contentType, blob, ext }`
-- Dialogda preview kartasi ko'rsatiladi:
-  ```
-  [original thumb] → [processed thumb]
-  1.8 MB JPEG  →  240 KB WebP  •  1920×1280
-  [Tasdiqlash] [Bekor qilish]
-  ```
-- "Tasdiqlash" bosilganda haqiqiy `supabase.storage.upload` chaqiriladi va `form.photo_url` yangilanadi
-- "Bekor qilish" — pending tozalanadi, `URL.revokeObjectURL` chaqiriladi
-- `useEffect` cleanup: dialog yopilganda barcha objectURL'lar revoke qilinadi
+`family_members WHERE telegram_id` topilmasa:
+1. `profiles WHERE telegram_id` → `userId` olinadi
+2. Agar `userId` topilsa: `families.owner_user_id = userId` yoki `user_roles WHERE user_id` topilsa — eng birinchi oilani olib `family_members` qatorini auto-link/insert qilish (`status:'active'`)
+3. Shundan keyin standart `member` topilgan rejimga o'tib magiclink beriladi
+4. Hech qanday bog'lanish topilmagandagina `403 not_registered` qaytariladi
 
-Bu bilan foydalanuvchi yuklashdan oldin natijani ko'radi va kichraytirish foydasini tushunadi.
+## C) `src/server/families.functions.ts` — `createFamily`
+
+`telegram_id` berilgan bo'lsa, `profiles.telegram_id` ni `userId` uchun **upsert** qilamiz (agar bo'sh bo'lsa) — kelajakda bu muammo qaytarilmasligi uchun.
+
+## D) Backfill (mavjud Tohirjon uchun)
+
+`profiles.telegram_id = 1633746526` ni `user_id = 7c645925-...` uchun yangilash. Bu **bir martalik data update** (`supabase--insert` orqali).
 
 ## Tegilmaydi
-- Server fn (`updateMember`) — whitelist allaqachon yetarli
-- `src/utils/imageProcess.ts` — o'zgarmaydi
-- RLS / migratsiyalar
+
+- RLS / migratsiya
+- Mini App UI / flow
+- Login forma
 
 ## Texnik tafsilot
-```text
-File picker → URL.createObjectURL(original) + processImageForUpload → URL.createObjectURL(processed)
-            → Preview card (before/after, size, dims)
-            → "Tasdiqlash" → storage.upload → setForm({photo_url})
-            → cleanup: revokeObjectURL on close/replace
 
-Form field onChange → validateField → setErrors → red helper text + disable Submit
-Select gender/relationship: value={form.x || undefined}  (Radix-friendly)
+```text
+/start  → family_members.tg_id?  → not found
+        → profiles.tg_id → user_id
+        → families.owner_user_id OR user_roles
+        → auto-create / auto-relink family_members row
+        → already_member
+
+miniapp-auth → bir xil mantiq, +magiclink
+createFamily → profiles.telegram_id upsert (idempotent)
 ```

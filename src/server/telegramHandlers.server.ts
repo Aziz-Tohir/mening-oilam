@@ -393,15 +393,60 @@ async function sendStartFlow(userId: number, from: TgUser) {
   const db = getAdminDb();
   const lang = await getUserLang(db, userId);
 
-  // 1. Mavjud a'zo
+  // 1. Mavjud a'zo (telegram_id bo'yicha)
   const { data: existingMemberships } = await db
     .from("family_members")
     .select("family_id, families:family_id(id, name)")
     .eq("telegram_id", userId)
     .eq("status", "active");
 
-  if (existingMemberships && existingMemberships.length > 0) {
-    const names = existingMemberships.map((m: any) => m.families?.name).filter(Boolean).join(", ");
+  let memberships: any[] = existingMemberships ?? [];
+
+  // 1b. Owner/admin ro'lini ham tekshir — web orqali oila yaratganlar uchun
+  if (memberships.length === 0) {
+    const { data: profByTg } = await db.from("profiles").select("user_id").eq("telegram_id", userId).maybeSingle();
+    const profileUserId = (profByTg as any)?.user_id as string | undefined;
+    if (profileUserId) {
+      const { data: ownedFams } = await db.from("families")
+        .select("id, name").eq("owner_user_id", profileUserId);
+      const { data: roleFams } = await db.from("user_roles")
+        .select("family_id, families:family_id(id, name)").eq("user_id", profileUserId);
+      const ownedList = (ownedFams ?? []).map((f: any) => ({ family_id: f.id, families: f }));
+      const roleList = (roleFams ?? []).map((r: any) => ({ family_id: r.family_id, families: r.families }));
+      const seen = new Set<string>();
+      memberships = [...ownedList, ...roleList].filter((x: any) => {
+        if (!x.family_id || seen.has(x.family_id)) return false;
+        seen.add(x.family_id);
+        return true;
+      });
+
+      // Auto-link family_members
+      for (const m of memberships) {
+        const { data: fm } = await db.from("family_members")
+          .select("id, telegram_id")
+          .eq("family_id", m.family_id)
+          .eq("user_id", profileUserId)
+          .maybeSingle();
+        if (fm) {
+          if ((fm as any).telegram_id !== userId) {
+            await db.from("family_members").update({ telegram_id: userId, status: "active" }).eq("id", (fm as any).id);
+          }
+        } else {
+          await db.from("family_members").insert({
+            family_id: m.family_id,
+            telegram_id: userId,
+            user_id: profileUserId,
+            full_name: from.first_name ? `${from.first_name} ${from.last_name ?? ""}`.trim() : `User ${userId}`,
+            username: from.username ?? null,
+            status: "active",
+          });
+        }
+      }
+    }
+  }
+
+  if (memberships.length > 0) {
+    const names = memberships.map((m: any) => m.families?.name).filter(Boolean).join(", ");
     await sendMessage(userId, t("already_member", lang, { names: names || "oila" }));
     return;
   }
