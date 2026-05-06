@@ -1,5 +1,6 @@
 // Shared relationship type list (uzbek labels) — used in both bot keyboards and admin UI.
 export const RELATIONSHIP_OPTIONS = [
+  { value: "self", label: "Men (o'zim)" },
   { value: "father", label: "Otam" },
   { value: "mother", label: "Onam" },
   { value: "son", label: "O'g'lim" },
@@ -26,6 +27,21 @@ export const RELATIONSHIP_OPTIONS = [
   { value: "sister_in_law", label: "Qaynsingil" },
   { value: "nephew", label: "Jiyanim (o'g'il)" },
   { value: "niece", label: "Jiyanim (qiz)" },
+  { value: "nephew", label: "Jiyanim (o'g'il)" },
+  { value: "niece", label: "Jiyanim (qiz)" },
+  { value: "step_father", label: "O'gay otam" },
+  { value: "step_mother", label: "O'gay onam" },
+  { value: "step_son", label: "O'gay o'g'lim" },
+  { value: "step_daughter", label: "O'gay qizim" },
+  { value: "half_brother", label: "O'gay akam/ukam" },
+  { value: "half_sister", label: "O'gay opam/singlim" },
+  { value: "great_grandfather", label: "Buvamning otasi" },
+  { value: "great_grandmother", label: "Buvamning onasi" },
+  { value: "great_grandson", label: "Chevaram (o'g'il)" },
+  { value: "great_granddaughter", label: "Chevaram (qiz)" },
+  { value: "godfather", label: "Otaxon" },
+  { value: "godmother", label: "Onaxon" },
+  { value: "family_friend", label: "Oila do'sti" },
   { value: "other", label: "Boshqa qarindosh" },
 ] as const;
 
