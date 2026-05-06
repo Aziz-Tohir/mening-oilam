@@ -138,41 +138,151 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
     photo_url: member.photo_url ?? "",
     photo_is_private: !!member.photo_is_private,
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  type Pending = {
+    originalUrl: string; processedUrl: string;
+    originalSize: number; processedSize: number;
+    width: number; height: number;
+    blob: Blob; ext: string; contentType: string;
+    originalType: string;
+  };
+  const [pending, setPending] = useState<Pending | null>(null);
+
+  // Cleanup any object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (pending) {
+        URL.revokeObjectURL(pending.originalUrl);
+        URL.revokeObjectURL(pending.processedUrl);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ----- Validation -----
+  const validate = (field: string, value: string): string => {
+    switch (field) {
+      case "full_name": {
+        const v = value.trim();
+        if (v.length < 2) return "Kamida 2 ta belgi";
+        if (v.length > 128) return "128 belgidan oshmasin";
+        return "";
+      }
+      case "username": {
+        if (!value) return "";
+        if (!/^[A-Za-z0-9_]{3,32}$/.test(value)) return "Faqat harf/raqam/_ (3–32)";
+        return "";
+      }
+      case "phone": {
+        if (!value) return "";
+        if (!/^\+?[0-9 ()\-]{7,20}$/.test(value)) return "Telefon noto'g'ri (masalan +998901234567)";
+        const digits = value.replace(/\D/g, "");
+        if (digits.length < 7 || digits.length > 15) return "Telefon raqami 7–15 ta raqam bo'lsin";
+        return "";
+      }
+      case "birth_date": {
+        if (!value) return "";
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return "Sana noto'g'ri";
+        const now = new Date();
+        if (d > now) return "Kelajakdagi sana bo'lmasin";
+        if (d < new Date("1900-01-01")) return "Sana juda eski (1900-yildan keyin)";
+        const ageYears = (now.getTime() - d.getTime()) / (365.25 * 24 * 3600 * 1000);
+        if (ageYears > 130) return "Sana mantiqsiz (yosh 130 dan ortiq)";
+        return "";
+      }
+      case "bio": {
+        if (value.length > 1000) return "1000 belgidan oshmasin";
+        return "";
+      }
+      default: return "";
+    }
+  };
+
+  const setField = (field: keyof typeof form, value: string) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    const err = validate(field, value);
+    setErrors((e) => {
+      const next = { ...e };
+      if (err) next[field] = err; else delete next[field];
+      return next;
+    });
+  };
+
+  const errMsg = (k: string) => errors[k]
+    ? <p className="mt-1 text-xs text-destructive">{errors[k]}</p>
+    : null;
+
+  // ----- Image preview / upload -----
+  const clearPending = () => {
+    if (pending) {
+      URL.revokeObjectURL(pending.originalUrl);
+      URL.revokeObjectURL(pending.processedUrl);
+    }
+    setPending(null);
+  };
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Faqat rasm fayli"); return; }
     if (file.size > 15 * 1024 * 1024) { toast.error("Rasm 15MB dan kichik bo'lishi kerak"); return; }
+    clearPending();
+    try {
+      const originalUrl = URL.createObjectURL(file);
+      const p = await processImageForUpload(file);
+      const processedUrl = URL.createObjectURL(p.blob);
+      setPending({
+        originalUrl, processedUrl,
+        originalSize: file.size, processedSize: p.blob.size,
+        width: p.width, height: p.height,
+        blob: p.blob, ext: p.ext, contentType: p.contentType,
+        originalType: file.type || "image",
+      });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Rasmni qayta ishlab bo'lmadi");
+    }
+  };
+
+  const confirmUpload = async () => {
+    if (!pending) return;
+    setConfirming(true);
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Tizimga kiring");
-      let blob: Blob = file;
-      let ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      let contentType = file.type;
-      let note = "";
-      try {
-        const p = await processImageForUpload(file);
-        blob = p.blob; ext = p.ext; contentType = p.contentType;
-        note = ` (${formatBytes(file.size)} → ${formatBytes(p.blob.size)})`;
-      } catch (e) { console.warn(e); }
-      const key = `${user.id}/admin-${member.id}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(key, blob, { upsert: true, contentType });
+      const key = `${user.id}/admin-${member.id}-${Date.now()}.${pending.ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(key, pending.blob, { upsert: true, contentType: pending.contentType });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("avatars").getPublicUrl(key);
       setForm((f) => ({ ...f, photo_url: pub.publicUrl }));
-      toast.success(`Rasm yuklandi${note}`);
+      toast.success(`Rasm yuklandi (${formatBytes(pending.originalSize)} → ${formatBytes(pending.processedSize)})`);
+      clearPending();
     } catch (e: any) {
       toast.error(e?.message ?? "Yuklab bo'lmadi");
     } finally {
       setUploading(false);
+      setConfirming(false);
     }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Re-run all validations
+    const fields = ["full_name", "username", "phone", "birth_date", "bio"] as const;
+    const next: Record<string, string> = {};
+    for (const f of fields) {
+      const err = validate(f, (form as any)[f] ?? "");
+      if (err) next[f] = err;
+    }
+    setErrors(next);
+    if (Object.keys(next).length > 0) {
+      toast.error("Formani to'g'rilang");
+      return;
+    }
     setSaving(true);
     try {
       await callServer(updateMember, {
@@ -200,8 +310,10 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
     }
   };
 
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog open onOpenChange={(o) => { if (!o) { clearPending(); onClose(); } }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>A'zoni tahrirlash</DialogTitle>
@@ -218,8 +330,8 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
             <div className="flex flex-wrap gap-2">
               <input ref={fileRef} type="file" accept="image/*" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
-              <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                {uploading ? "Yuklanmoqda…" : "Rasm yuklash"}
+              <Button type="button" variant="outline" size="sm" disabled={uploading || !!pending} onClick={() => fileRef.current?.click()}>
+                Rasm tanlash
               </Button>
               {form.photo_url && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => setForm({ ...form, photo_url: "" })}>
@@ -229,6 +341,40 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
             </div>
           </div>
 
+          {pending && (
+            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Yuklashdan oldin ko'rib chiqing</div>
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <img src={pending.originalUrl} alt="original" className="h-20 w-20 rounded object-cover border border-border" />
+                  <span className="text-[10px] text-muted-foreground">Original</span>
+                </div>
+                <div className="text-muted-foreground">→</div>
+                <div className="flex flex-col items-center gap-1">
+                  <img src={pending.processedUrl} alt="processed" className="h-20 w-20 rounded object-cover border border-border" />
+                  <span className="text-[10px] text-muted-foreground">Optimallashtirilgan</span>
+                </div>
+                <div className="ml-auto text-right text-xs leading-relaxed">
+                  <div>
+                    <span className="text-muted-foreground">{formatBytes(pending.originalSize)}</span>
+                    <span className="mx-1">→</span>
+                    <span className="font-semibold text-foreground">{formatBytes(pending.processedSize)}</span>
+                  </div>
+                  <div className="text-muted-foreground">{pending.contentType.split("/")[1]?.toUpperCase()} • {pending.width}×{pending.height}</div>
+                  {pending.processedSize < pending.originalSize && (
+                    <div className="text-emerald-600">−{Math.round((1 - pending.processedSize / pending.originalSize) * 100)}%</div>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={clearPending} disabled={confirming}>Bekor qilish</Button>
+                <Button type="button" size="sm" onClick={confirmUpload} disabled={confirming}>
+                  {confirming ? "Yuklanmoqda…" : "Tasdiqlash va yuklash"}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded border border-border p-2">
             <div>
               <Label className="text-xs">Foto faqat oila a'zolariga</Label>
@@ -237,18 +383,24 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
           </div>
 
           <div><Label>To'liq ism *</Label>
-            <Input required maxLength={128} value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+            <Input required maxLength={128} value={form.full_name} aria-invalid={!!errors.full_name}
+              onChange={(e) => setField("full_name", e.target.value)} />
+            {errMsg("full_name")}
           </div>
           <div><Label>Username</Label>
-            <Input maxLength={64} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="username (without @)" />
+            <Input maxLength={64} value={form.username} aria-invalid={!!errors.username}
+              onChange={(e) => setField("username", e.target.value)} placeholder="username (without @)" />
+            {errMsg("username")}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Tug'ilgan kun</Label>
-              <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+              <Input type="date" value={form.birth_date} aria-invalid={!!errors.birth_date}
+                onChange={(e) => setField("birth_date", e.target.value)} />
+              {errMsg("birth_date")}
             </div>
             <div><Label>Jins</Label>
-              <Select value={form.gender} onValueChange={(v) => setForm({ ...form, gender: v as any })}>
+              <Select value={form.gender || undefined} onValueChange={(v) => setForm({ ...form, gender: v as any })}>
                 <SelectTrigger><SelectValue placeholder="Tanlanmagan" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="male">Erkak</SelectItem>
@@ -259,13 +411,15 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
           </div>
 
           <div><Label>Telefon</Label>
-            <Input type="tel" maxLength={32} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998…" />
+            <Input type="tel" maxLength={32} value={form.phone} aria-invalid={!!errors.phone}
+              onChange={(e) => setField("phone", e.target.value)} placeholder="+998901234567" />
+            {errMsg("phone")}
           </div>
 
           <div><Label>Aloqa (qarindoshlik)</Label>
-            <Select value={form.relationship_to_inviter} onValueChange={(v) => setForm({ ...form, relationship_to_inviter: v })}>
+            <Select value={form.relationship_to_inviter || undefined} onValueChange={(v) => setForm({ ...form, relationship_to_inviter: v })}>
               <SelectTrigger><SelectValue placeholder="Tanlanmagan" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-72">
                 {RELATIONSHIP_OPTIONS.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -282,13 +436,15 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
             </Select>
           </div>
 
-          <div><Label>Bio</Label>
-            <Textarea maxLength={1000} rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
+          <div><Label>Bio <span className="text-xs text-muted-foreground">({form.bio.length}/1000)</span></Label>
+            <Textarea maxLength={1000} rows={3} value={form.bio} aria-invalid={!!errors.bio}
+              onChange={(e) => setField("bio", e.target.value)} />
+            {errMsg("bio")}
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>Bekor qilish</Button>
-            <Button type="submit" disabled={saving}>{saving ? "Saqlanmoqda…" : "Saqlash"}</Button>
+            <Button type="button" variant="ghost" onClick={() => { clearPending(); onClose(); }}>Bekor qilish</Button>
+            <Button type="submit" disabled={saving || hasErrors || !!pending}>{saving ? "Saqlanmoqda…" : "Saqlash"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
