@@ -171,6 +171,7 @@ async function handleAvatarPhoto(userId: number, msg: TgMessage) {
     console.error("[bot] avatar upload failed", e);
     await sendMessage(userId, "❌ Rasmni saqlab bo'lmadi. Keyinroq urinib ko'ring.");
   }
+}
 
 // ---------- /start welcome message ----------
 async function sendWelcome(userId: number) {
