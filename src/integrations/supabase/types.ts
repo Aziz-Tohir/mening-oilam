@@ -1095,6 +1095,20 @@ export type Database = {
         | "nephew"
         | "niece"
         | "other"
+        | "self"
+        | "step_father"
+        | "step_mother"
+        | "step_son"
+        | "step_daughter"
+        | "half_brother"
+        | "half_sister"
+        | "great_grandfather"
+        | "great_grandmother"
+        | "great_grandson"
+        | "great_granddaughter"
+        | "godfather"
+        | "godmother"
+        | "family_friend"
       rsvp_status: "yes" | "no" | "maybe"
     }
     CompositeTypes: {
@@ -1270,6 +1284,20 @@ export const Constants = {
         "nephew",
         "niece",
         "other",
+        "self",
+        "step_father",
+        "step_mother",
+        "step_son",
+        "step_daughter",
+        "half_brother",
+        "half_sister",
+        "great_grandfather",
+        "great_grandmother",
+        "great_grandson",
+        "great_granddaughter",
+        "godfather",
+        "godmother",
+        "family_friend",
       ],
       rsvp_status: ["yes", "no", "maybe"],
     },
