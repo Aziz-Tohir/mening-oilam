@@ -629,6 +629,11 @@ async function handleCallback(cb: TgCallback) {
     return;
   }
 
+  if (data.startsWith("bday:")) {
+    await handleBirthdayGreeting(cb, data.slice(5));
+    return;
+  }
+
   if (data.startsWith("kim:")) {
     await handleKinshipCallback(cb, data);
     return;
