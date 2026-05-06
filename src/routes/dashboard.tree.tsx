@@ -228,6 +228,7 @@ function TreePage() {
             Faqat faollar
           </label>
           <Button variant="outline" size="sm" onClick={exportPng}>PNG</Button>
+          <Button variant="outline" size="sm" onClick={exportJson}>JSON</Button>
         </div>
       </div>
 
