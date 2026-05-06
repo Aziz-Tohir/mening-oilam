@@ -99,18 +99,33 @@ function ProfilePage() {
   const handleFile = async (file: File) => {
     if (!m) return;
     if (!file.type.startsWith("image/")) { toast.error("Faqat rasm fayli"); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error("Rasm 5MB dan kichik bo'lishi kerak"); return; }
+    if (file.size > 15 * 1024 * 1024) { toast.error("Rasm 15MB dan kichik bo'lishi kerak"); return; }
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Tizimga kiring");
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+
+      let blob: Blob = file;
+      let ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      let contentType = file.type;
+      let sizeNote = "";
+      try {
+        const processed = await processImageForUpload(file);
+        blob = processed.blob;
+        ext = processed.ext;
+        contentType = processed.contentType;
+        sizeNote = ` (${formatBytes(file.size)} → ${formatBytes(processed.blob.size)})`;
+      } catch (convErr) {
+        // Fallback: original file
+        console.warn("Image conversion failed, uploading original", convErr);
+      }
+
       const key = `${user.id}/${m.id}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(key, file, { upsert: true, contentType: file.type });
+      const { error: upErr } = await supabase.storage.from("avatars").upload(key, blob, { upsert: true, contentType });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("avatars").getPublicUrl(key);
       setForm((f) => ({ ...f, photo_url: pub.publicUrl }));
-      toast.success("Rasm yuklandi. Saqlash tugmasini bosing.");
+      toast.success(`Rasm yuklandi${sizeNote}. Saqlash tugmasini bosing.`);
     } catch (e: any) {
       toast.error(e?.message ?? "Yuklab bo'lmadi");
     } finally {
