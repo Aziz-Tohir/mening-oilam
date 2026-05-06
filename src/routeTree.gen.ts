@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard.index'
+import { Route as DashboardUpdatesRouteImport } from './routes/dashboard.updates'
 import { Route as DashboardTreeRouteImport } from './routes/dashboard.tree'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
@@ -44,6 +45,11 @@ const IndexRoute = IndexRouteImport.update({
 const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardUpdatesRoute = DashboardUpdatesRouteImport.update({
+  id: '/updates',
+  path: '/updates',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardTreeRoute = DashboardTreeRouteImport.update({
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
+  '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
+  '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/dashboard/requests': typeof DashboardRequestsRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
+  '/dashboard/updates': typeof DashboardUpdatesRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/tree'
+    | '/dashboard/updates'
     | '/dashboard/'
     | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/miniapp-auth'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/tree'
+    | '/dashboard/updates'
     | '/dashboard'
     | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/miniapp-auth'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/dashboard/requests'
     | '/dashboard/settings'
     | '/dashboard/tree'
+    | '/dashboard/updates'
     | '/dashboard/'
     | '/api/public/cron/daily-reminders'
     | '/api/public/telegram/miniapp-auth'
@@ -258,6 +270,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/updates': {
+      id: '/dashboard/updates'
+      path: '/updates'
+      fullPath: '/dashboard/updates'
+      preLoaderRoute: typeof DashboardUpdatesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/tree': {
@@ -356,6 +375,7 @@ interface DashboardRouteChildren {
   DashboardRequestsRoute: typeof DashboardRequestsRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardTreeRoute: typeof DashboardTreeRoute
+  DashboardUpdatesRoute: typeof DashboardUpdatesRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
@@ -368,6 +388,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardRequestsRoute: DashboardRequestsRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardTreeRoute: DashboardTreeRoute,
+  DashboardUpdatesRoute: DashboardUpdatesRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 

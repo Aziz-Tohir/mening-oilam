@@ -10,7 +10,7 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardLayout,
 });
 
-const ADMIN_ONLY_PATHS = ["/dashboard/members", "/dashboard/requests", "/dashboard/bot", "/dashboard/settings"];
+const ADMIN_ONLY_PATHS = ["/dashboard/members", "/dashboard/requests", "/dashboard/bot", "/dashboard/settings", "/dashboard/updates"];
 
 function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
@@ -80,6 +80,7 @@ function DashboardLayout() {
     ["/dashboard/profile", "Profil", false],
     ["/dashboard/bot", "Bot", true],
     ["/dashboard/settings", "Sozlamalar", true],
+    ["/dashboard/updates", "Updates", true],
   ];
   const tabs = allTabs.filter(([, , adminOnly]) => isAdmin || !adminOnly);
 
