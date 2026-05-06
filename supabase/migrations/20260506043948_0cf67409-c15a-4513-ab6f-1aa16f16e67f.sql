@@ -1,0 +1,1 @@
+ALTER TABLE public.family_settings ADD COLUMN IF NOT EXISTS enforce_bot_onboarding boolean NOT NULL DEFAULT true;

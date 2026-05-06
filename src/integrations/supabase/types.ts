@@ -406,6 +406,7 @@ export type Database = {
           anti_link: boolean
           birthday_notify_time: string
           delete_join_leave_messages: boolean
+          enforce_bot_onboarding: boolean
           family_id: string
           feature_birthdays: boolean
           feature_events: boolean
@@ -429,6 +430,7 @@ export type Database = {
           anti_link?: boolean
           birthday_notify_time?: string
           delete_join_leave_messages?: boolean
+          enforce_bot_onboarding?: boolean
           family_id: string
           feature_birthdays?: boolean
           feature_events?: boolean
@@ -452,6 +454,7 @@ export type Database = {
           anti_link?: boolean
           birthday_notify_time?: string
           delete_join_leave_messages?: boolean
+          enforce_bot_onboarding?: boolean
           family_id?: string
           feature_birthdays?: boolean
           feature_events?: boolean

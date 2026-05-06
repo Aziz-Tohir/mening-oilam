@@ -1,39 +1,45 @@
 ## Maqsad
 
-Hozir ma'lumotlar 30 daqiqa keshlanadi. Foydalanuvchi xohlaganda darhol yangilash uchun har bir bo'limda alohida "Yangilash" tugmasi bo'lsin.
-
-## Yondashuv
-
-`CacheStatus` komponentiga ixtiyoriy `onRefresh` va `refreshing` proplarini qo'shaman. Agar `onRefresh` berilgan bo'lsa, status yonida kichik aylanma ikonkali tugma chiqadi. Bosilganda `refetch()` chaqiriladi va kesh yangilanadi.
-
-Shu bilan har bir bo'limda dizayn bir xil ko'rinadi va kod takrorlanmaydi.
+Botli oilada **botdan o'tmasdan** to'g'ridan-to'g'ri guruhga qo'shilgan foydalanuvchi guruhda yoza olmasin (muted). Bot orqali ro'yxatdan o'tib `family_members.status = 'active'` bo'lgach — avtomatik mute olib tashlanadi. Adminlar buni Sozlamalardan yoqib/o'chirib qo'ya olishi kerak.
 
 ## O'zgarishlar
 
-### 1. `src/components/CacheStatus.tsx`
-- Yangi proplar: `onRefresh?: () => void | Promise<void>`.
-- `loading` holatida tugma o'chiq (disabled) va aylanayotgan ikonka.
-- `lucide-react` dan `RefreshCw` ikonkasi.
+### 1) Sozlama (DB)
 
-### 2. Bo'limlarda `onRefresh` ulash (har bir tab uchun alohida)
+Migration: `family_settings`'ga ustun qo'shamiz
 
-Quyidagi sahifalarda har bir kartochka/blok yonidagi `<CacheStatus />` ga `onRefresh={() => { invalidateCache('<key>'); refetch(); }}` qo'shiladi:
+- `enforce_bot_onboarding boolean not null default true`
 
-- **`src/routes/dashboard.events.tsx`** — ikkita: tug'ilgan kunlar (`bdays:${familyId}`) va tadbirlar (`events:${familyId}`). Hozir `bdays` uchun `refetch` ishlatilmagan — `useCachedServer` chaqirig'ida `refetch: refetchBdays` ham olinadi.
-- **`src/routes/dashboard.members.tsx`** — a'zolar ro'yxati (`members:${familyId}`).
-- **`src/routes/dashboard.tree.tsx`** — shajara va boshqa keshlangan bloklar.
-- **`src/routes/dashboard.profile.tsx`** — profil ma'lumotlari.
-- **`src/routes/dashboard.index.tsx`** — bosh sahifa kartochkalari.
+### 2) Guruhga qo'shilganda mute (`telegramHandlers.server.ts`)
 
-### 3. `dashboard.requests.tsx`
-Hozir `useCachedServer` ishlatmaydi — uni ham boshqa sahifalar singari `useCachedServer` ga o'tkazaman va yangilash tugmasini qo'shaman, shunda barcha tablar bir xil ishlaydi.
+`handleMessage`'da `msg.new_chat_members` qismini kengaytiramiz:
+
+- Family topilsa va `enforce_bot_onboarding = true` bo'lsa, har bir yangi a'zo uchun:
+  - botning o'zini va mavjud `active` `family_members` (telegram_id bo'yicha)ni o'tkazib yuboramiz
+  - qolganlariga `restrictChatMember(chat.id, user.id)` (until_date'siz = doimiy mute)
+  - guruhga qisqa xabar: "@username, iltimos botga /start yuboring va ro'yxatdan o'ting. Tasdiqlangach yozish mumkin." (welcome auto-delete bilan, agar sozlangan bo'lsa)
+  - `action_logs`'ga `joined_unverified_muted` yozuvi
+- `delete_join_leave_messages` mantigi avvalgidek qoladi (xizmat xabarini o'chirish bilan birga mute ham qo'yiladi)
+
+Shuningdek `chat_member` updateni ham qo'llab-quvvatlash uchun `processUpdate`'da `update.chat_member` shoxini qo'shamiz (foydalanuvchi linkka ergashib o'zi qo'shilgan holatlar uchun) va `setWebhook`'ning `allowed_updates`'ga `chat_member` qo'shilishini tekshiramiz/qayta ro'yxatdan o'tkazamiz.
+
+### 3) Tasdiqlangach unmute
+
+`handleApproveJoin` (join_requests approve) ichida — `family_members.status` `active` bo'lgach, agar `families.telegram_group_id` bor bo'lsa, `restrictChatMember` chaqirib **barcha permissionlarni qaytarib** beramiz. Buning uchun `telegram.server.ts`'ga yangi helper qo'shamiz: `unrestrictChatMember(chatId, userId)` — Telegram `restrictChatMember` ni to'liq permissions bilan chaqiradi (`can_send_messages: true`, ...).
+
+### 4) Sozlamalar UI (`dashboard.settings.tsx`)
+
+"Onboarding" kartochkasiga yangi switch:
+
+- **"Botdan ro'yxatdan o'tishni majburlash"** → `enforce_bot_onboarding`
+- Yordamchi izoh: "Yoqilgan bo'lsa, guruhga to'g'ridan-to'g'ri qo'shilganlar bot orqali tasdiqlanmaguncha yoza olmaydi."
+
+### 5) admin.functions.ts
+
+Patch sxemasini kengaytiramiz (`updateFamilySettings` allaqachon ixtiyoriy patch oladi — alohida o'zgarish shart emas, faqat tip yangilanadi).
 
 ## Texnik tafsilotlar
 
-`CacheStatus` interfeysi:
-```ts
-{ ts, stale, loading, onRefresh? }
-```
-Tugma `button` sifatida `aria-label="Yangilash"`, `loading` paytida `animate-spin`. Bosilganda `invalidateCache(key)` + `refetch()` ketma-ket chaqiriladi (har sahifada o'sha kalit bilan).
-
-Boshqa narsa o'zgarmaydi — 30 daqiqalik kesh, SWR mantig'i o'sha-o'sha.
+- `restrictChatMember` until_date siz = doimiy
+- Bot guruhda admin bo'lishi kerak (allaqachon shart). Agar bot admin emas bo'lsa, API xato qaytaradi — `try/catch` bilan log qilamiz, jarayon to'xtamaydi.
+- `chat_member` updatesi uchun webhook `allowed_updates`'iga `"chat_member"` qo'shilishini ta'minlaymiz (bot tomondan polling/webhook setupida).
