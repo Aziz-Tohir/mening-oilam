@@ -924,6 +924,7 @@ async function handleHelpRequest(userId: number, from: TgUser | undefined, messa
         family_id: m.family_id, actor_telegram_id: userId,
         action: "help_request", details: { text },
       });
+      await postLog(m.family_id, "admin", `🆘 Yordam so'rovi: <b>${name}</b>\n${body}`);
     } catch (e) { console.warn("[bot] /yordam failed", e); }
   }
   await sendMessage(userId, sent > 0 ? `✅ Yordam so'rovingiz ${sent} ta guruhga yuborildi.` : "Guruh topilmadi.");
