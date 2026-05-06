@@ -190,11 +190,7 @@ async function handleMessage(msg: TgMessage) {
   if (text.startsWith("/start")) {
     const parts = text.split(/\s+/);
     const payload = parts[1] ?? "";
-    await sendMessage(
-      userId,
-      "👋 Assalomu alaykum! Men <b>Shajara boti</b>man.\n\nTo'liq yordam uchun /help yuboring.",
-      { parse_mode: "HTML" },
-    );
+    const lang = await getUserLang(db, userId);
     // Deep link: /start fam_<CODE>
     if (payload.startsWith("fam_")) {
       const code = payload.slice(4);
@@ -203,11 +199,16 @@ async function handleMessage(msg: TgMessage) {
         await startJoinRequest(userId, msg.from!, fam.id, fam.name);
         return;
       }
-      await sendMessage(userId, "❌ Taklif kodi noto'g'ri yoki muddati tugagan.");
+      await sendMessage(userId, t("deep_link_invalid", lang));
+      return;
     }
     await sendStartFlow(userId, msg.from!);
     return;
   }
+
+  // Wizard input (e.g., new family name)
+  const wizardHandled = await handleWizardInput(userId, msg);
+  if (wizardHandled) return;
 
   if (text === "/help" || text === "/info") {
     await sendWelcome(userId);
