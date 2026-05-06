@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
+import { processImageForUpload, formatBytes } from "@/utils/imageProcess";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/profile")({
