@@ -27,8 +27,6 @@ export const RELATIONSHIP_OPTIONS = [
   { value: "sister_in_law", label: "Qaynsingil" },
   { value: "nephew", label: "Jiyanim (o'g'il)" },
   { value: "niece", label: "Jiyanim (qiz)" },
-  { value: "nephew", label: "Jiyanim (o'g'il)" },
-  { value: "niece", label: "Jiyanim (qiz)" },
   { value: "step_father", label: "O'gay otam" },
   { value: "step_mother", label: "O'gay onam" },
   { value: "step_son", label: "O'gay o'g'lim" },
