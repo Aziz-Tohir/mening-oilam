@@ -145,11 +145,11 @@ async function handleMessage(msg: TgMessage) {
         return;
       }
 
-      // Foreign bots: delete any message (text/media) from other bots in the group
+      // Foreign bots: handle media via repost (with caption tag) or just delete
       const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
       const fromUser: any = (msg as any).from;
       if (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) {
-        await deleteMessage(msg.chat.id, msg.message_id);
+        await handleForeignBotMessage(msg, family.id, !!(settings as any)?.manage_foreign_bot_media);
         return;
       }
 
