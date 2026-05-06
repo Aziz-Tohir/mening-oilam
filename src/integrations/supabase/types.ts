@@ -295,7 +295,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          invite_code: string
+          invite_code?: string
           name: string
           owner_user_id: string
           telegram_group_id?: number | null
