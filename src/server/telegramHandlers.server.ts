@@ -591,6 +591,12 @@ async function approveJoinRequest(req: any) {
   // Send invite link
   const { data: family } = await db.from("families").select("telegram_group_id, name").eq("id", req.family_id).maybeSingle();
   if (family?.telegram_group_id) {
+    // If user is already in the group (joined directly and was muted), unmute them
+    try {
+      await unrestrictChatMember(family.telegram_group_id, req.applicant_telegram_id);
+    } catch (e) {
+      console.warn("[bot] unrestrict failed (user may not be in group yet)", e);
+    }
     try {
       const link: any = await createChatInviteLink(family.telegram_group_id, {
         member_limit: 1,
