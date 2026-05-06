@@ -102,6 +102,7 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
     family_id: family.id, actor_telegram_id: userId,
     action: "auto_moderation", details: { reason: violation, action, chat_id: msg.chat.id },
   });
+  await postLog(family.id, "moderation", `🤖 Avto-moderatsiya: <b>${action}</b>\nA'zo: <code>${userId}</code>\nSabab: ${violation}`);
   return true;
 }
 
