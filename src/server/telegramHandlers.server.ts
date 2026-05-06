@@ -899,6 +899,44 @@ async function handleHelpRequest(userId: number, from: TgUser | undefined, messa
 }
 
 function escapeHtml(s: string) {
+
+}
+
+async function handleBirthdayGreeting(cb: TgCallback, memberId: string) {
+  const db = getAdminDb();
+  const { data: member } = await db.from("family_members")
+    .select("id, family_id, full_name, telegram_id, birth_date, families:family_id(telegram_group_id)")
+    .eq("id", memberId).maybeSingle();
+  if (!member) { await answerCallbackQuery(cb.id, "Topilmadi"); return; }
+  const year = new Date().getFullYear();
+  const greeterName = fullName(cb.from);
+  const { error: insErr } = await db.from("birthday_greetings").insert({
+    family_id: (member as any).family_id,
+    member_id: member.id,
+    greeter_telegram_id: cb.from.id,
+    greeter_name: greeterName,
+    greeting_year: year,
+  } as any);
+  if (insErr && !String(insErr.message).includes("duplicate")) {
+    console.warn("[bday] insert err", insErr);
+  }
+  if (insErr) {
+    await answerCallbackQuery(cb.id, "Allaqachon tabriklagansiz ✅");
+    return;
+  }
+  await answerCallbackQuery(cb.id, "Tabrigingiz yuborildi 🎉");
+  // Forward to birthday person privately
+  if ((member as any).telegram_id) {
+    try { await sendMessage((member as any).telegram_id, `🎂 ${greeterName} sizni tug'ilgan kuningiz bilan tabriklamoqda!`); } catch {}
+  }
+  // Group acknowledge
+  const groupId = (member as any).families?.telegram_group_id;
+  if (groupId) {
+    try { await sendMessage(groupId, `🎉 ${greeterName} → ${member.full_name}`); } catch {}
+  }
+}
+
+function _escapeHtml_unused(s: string) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
