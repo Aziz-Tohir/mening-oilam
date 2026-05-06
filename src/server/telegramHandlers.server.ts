@@ -161,11 +161,23 @@ async function handleMessage(msg: TgMessage) {
   if (!userId) return;
 
   if (text.startsWith("/start")) {
+    const parts = text.split(/\s+/);
+    const payload = parts[1] ?? "";
     await sendMessage(
       userId,
       "👋 Assalomu alaykum! Men <b>Shajara boti</b>man.\n\nTo'liq yordam uchun /help yuboring.",
       { parse_mode: "HTML" },
     );
+    // Deep link: /start fam_<CODE>
+    if (payload.startsWith("fam_")) {
+      const code = payload.slice(4);
+      const { data: fam } = await db.from("families").select("id, name").eq("invite_code", code).maybeSingle();
+      if (fam) {
+        await startJoinRequest(userId, msg.from!, fam.id, fam.name);
+        return;
+      }
+      await sendMessage(userId, "❌ Taklif kodi noto'g'ri yoki muddati tugagan.");
+    }
     await sendStartFlow(userId, msg.from!);
     return;
   }
@@ -177,6 +189,11 @@ async function handleMessage(msg: TgMessage) {
 
   if (text.startsWith("/kim")) {
     await startKinshipFlow(userId);
+    return;
+  }
+
+  if (text.startsWith("/yordam")) {
+    await handleHelpRequest(userId, msg.from, text.replace(/^\/yordam(@\S+)?\s*/, ""));
     return;
   }
 
@@ -548,7 +565,7 @@ async function handleCallback(cb: TgCallback) {
   await answerCallbackQuery(cb.id);
 }
 
-async function approveJoinRequest(req: any) {
+export async function approveJoinRequest(req: any) {
   const db = getAdminDb();
 
   // Insert family_member
