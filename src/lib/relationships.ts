@@ -1,5 +1,6 @@
 // Shared relationship type list (uzbek labels) — used in both bot keyboards and admin UI.
 export const RELATIONSHIP_OPTIONS = [
+  { value: "self", label: "Men (o'zim)" },
   { value: "father", label: "Otam" },
   { value: "mother", label: "Onam" },
   { value: "son", label: "O'g'lim" },
