@@ -707,6 +707,45 @@ async function isTelegramAdminOfFamily(familyId: string, telegramId: number): Pr
   return !!role;
 }
 
+// ---------- /yordam ----------
+async function handleHelpRequest(userId: number, from: TgUser | undefined, message: string) {
+  const text = (message ?? "").trim();
+  if (!text) {
+    await sendMessage(userId, "Foydalanish: <code>/yordam &lt;muammoyingiz&gt;</code>", { parse_mode: "HTML" });
+    return;
+  }
+  const db = getAdminDb();
+  const { data: members } = await db
+    .from("family_members")
+    .select("family_id, full_name, families:family_id(name, telegram_group_id)")
+    .eq("telegram_id", userId)
+    .eq("status", "active");
+  if (!members || members.length === 0) {
+    await sendMessage(userId, "Avval oilaga qo'shilishingiz kerak.");
+    return;
+  }
+  let sent = 0;
+  for (const m of members as any[]) {
+    const groupId = m.families?.telegram_group_id;
+    if (!groupId) continue;
+    const name = escapeHtml(m.full_name || fullName(from));
+    const body = escapeHtml(text);
+    try {
+      await sendMessage(groupId, `🆘 <b>Yordam so'rovi</b>\n👤 ${name}\n\n${body}`, { parse_mode: "HTML" });
+      sent++;
+      await db.from("action_logs").insert({
+        family_id: m.family_id, actor_telegram_id: userId,
+        action: "help_request", details: { text },
+      });
+    } catch (e) { console.warn("[bot] /yordam failed", e); }
+  }
+  await sendMessage(userId, sent > 0 ? `✅ Yordam so'rovingiz ${sent} ta guruhga yuborildi.` : "Guruh topilmadi.");
+}
+
+function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 // ---------- helpers ----------
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
