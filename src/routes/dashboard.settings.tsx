@@ -164,22 +164,37 @@ function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Bildirishnoma kanallari</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Log guruhi (forum + topiclar)</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <Row label="Log kanali (chat ID)">
+            <p className="text-xs text-muted-foreground">
+              Telegram'da forum (topiclar yoqilgan) guruh oching, botni admin qilib qo'shing va har bir bo'lim uchun alohida topic yarating.
+              Topic ID ni topic havolasidan olish mumkin: <code>t.me/c/&lt;chat&gt;/&lt;topic_id&gt;</code>.
+              Agar topic bo'sh qoldirilsa, xabar guruhning bosh oqimiga (General) yuboriladi.
+            </p>
+            <Row label="Log guruh chat ID (forum)">
               <Input className="w-44" type="number" value={settings.log_telegram_chat_id ?? ""}
                 onBlur={(e) => save({ log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })}
                 onChange={(e) => setSettings({ ...settings, log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
             </Row>
-            <Row label="Admin bildirishnoma kanali">
-              <Input className="w-44" type="number" value={settings.admin_notification_channel_id ?? ""}
-                onBlur={(e) => save({ admin_notification_channel_id: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, admin_notification_channel_id: e.target.value ? Number(e.target.value) : null })} />
+            <Row label="Topic: Amallar (action_logs)">
+              <Input className="w-32" type="number" value={settings.log_topic_actions ?? ""}
+                onBlur={(e) => save({ log_topic_actions: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => setSettings({ ...settings, log_topic_actions: e.target.value ? Number(e.target.value) : null })} />
             </Row>
-            <Row label="Backup chat (JSON dump shu yerga yuboriladi)">
-              <Input className="w-44" type="number" value={settings.backup_telegram_chat_id ?? ""}
-                onBlur={(e) => save({ backup_telegram_chat_id: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, backup_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
+            <Row label="Topic: Admin (qo'shilish so'rovlari)">
+              <Input className="w-32" type="number" value={settings.log_topic_admin ?? ""}
+                onBlur={(e) => save({ log_topic_admin: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => setSettings({ ...settings, log_topic_admin: e.target.value ? Number(e.target.value) : null })} />
+            </Row>
+            <Row label="Topic: Moderatsiya (delete/mute/ban)">
+              <Input className="w-32" type="number" value={settings.log_topic_moderation ?? ""}
+                onBlur={(e) => save({ log_topic_moderation: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => setSettings({ ...settings, log_topic_moderation: e.target.value ? Number(e.target.value) : null })} />
+            </Row>
+            <Row label="Topic: Backup (JSON dump)">
+              <Input className="w-32" type="number" value={settings.log_topic_backup ?? ""}
+                onBlur={(e) => save({ log_topic_backup: e.target.value ? Number(e.target.value) : null })}
+                onChange={(e) => setSettings({ ...settings, log_topic_backup: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Backup chastotasi">
               <Select value={settings.backup_frequency ?? "weekly"} onValueChange={(v) => save({ backup_frequency: v })}>
