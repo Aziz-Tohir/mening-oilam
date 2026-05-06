@@ -96,7 +96,15 @@ async function handleMessage(msg: TgMessage) {
         return;
       }
 
-      // Auto-moderation (anti-link, anti-forward, anti-flood, banned words)
+      // Foreign bots: delete any message (text/media) from other bots in the group
+      const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
+      const fromUser: any = (msg as any).from;
+      if (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) {
+        await deleteMessage(msg.chat.id, msg.message_id);
+        return;
+      }
+
+      // Auto-moderation (anti-link, anti-forward, anti-flood, banned words, media)
       const { moderateGroupMessage } = await import("./moderation.server");
       const moderated = await moderateGroupMessage(msg as any, { id: family.id, telegram_group_id: family.telegram_group_id! });
       if (moderated) return;
