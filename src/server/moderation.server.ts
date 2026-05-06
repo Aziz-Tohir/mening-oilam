@@ -64,18 +64,22 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
 
   await deleteMessage(msg.chat.id, msg.message_id);
 
+  // Build a clickable mention for the offender
+  const mentionName = escapeHtml(msg.from?.first_name || msg.from?.username || `id${userId}`);
+  const mention = `<a href="tg://user?id=${userId}">${mentionName}</a>`;
+
   if (action === "warn" || action === "kick") {
     const { data: member } = await db.from("family_members")
       .select("id, full_name").eq("family_id", family.id).eq("telegram_id", userId).maybeSingle();
-    if (member) {
+    const memberId = member?.id;
+    if (memberId) {
       await db.from("member_warnings").insert({
-        family_id: family.id, member_id: member.id, telegram_id: userId, reason: violation, auto: true,
+        family_id: family.id, member_id: memberId, telegram_id: userId, reason: violation, auto: true,
       });
       const { count } = await db.from("member_warnings").select("*", { count: "exact", head: true })
-        .eq("family_id", family.id).eq("member_id", member.id);
+        .eq("family_id", family.id).eq("member_id", memberId);
       const total = count ?? 1;
       const max = settings.max_warnings ?? 3;
-      const name = msg.from?.first_name ?? member.full_name;
       if (total >= max) {
         const act = settings.warning_action ?? "kick";
         try {
@@ -83,10 +87,13 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
           else if (act === "mute") await restrictChatMember(msg.chat.id, userId, Math.floor(Date.now()/1000) + 3600);
           else await banChatMember(msg.chat.id, userId);
         } catch (e) { console.warn("[mod] action failed", e); }
-        await sendMessage(msg.chat.id, `🚫 ${name} ${max} ta ogohlantirish oldi va guruhdan chiqarildi.`);
+        await sendMessage(msg.chat.id, `🚫 ${mention} ${max} ta ogohlantirish oldi va guruhdan chiqarildi.`, { parse_mode: "HTML" });
       } else {
-        await sendMessage(msg.chat.id, `⚠️ ${name}, ${violation}. (${total}/${max})`);
+        await sendMessage(msg.chat.id, `⚠️ ${mention}, ${violation}. (${total}/${max})`, { parse_mode: "HTML" });
       }
+    } else {
+      // Not a registered family member — still notify with a tag
+      await sendMessage(msg.chat.id, `⚠️ ${mention}, ${violation}.`, { parse_mode: "HTML" });
     }
   }
 
@@ -98,3 +105,4 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
 }
 
 function escapeRegex(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function escapeHtml(s: string) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
