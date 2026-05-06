@@ -71,19 +71,36 @@ export const updateMember = createServerFn({ method: "POST" })
     familyId: z.string().uuid(),
     memberId: z.string().uuid(),
     patch: z.object({
+      full_name: z.string().min(1).max(128).optional(),
       birth_date: z.string().nullable().optional(),
       phone: z.string().max(32).nullable().optional(),
       bio: z.string().max(1000).nullable().optional(),
-      full_name: z.string().min(1).max(128).optional(),
+      gender: z.enum(["male", "female"]).nullable().optional(),
+      photo_url: z.string().nullable().optional(),
+      photo_is_private: z.boolean().optional(),
+      status: z.enum(["active", "blocked", "pending"]).optional(),
+      username: z.string().max(64).nullable().optional(),
+      relationship_to_inviter: z.string().max(64).nullable().optional(),
     }),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { error } = await supabase.from("family_members")
       .update(data.patch as never)
       .eq("id", data.memberId)
       .eq("family_id", data.familyId);
     if (error) throw new Error(error.message);
+    await getAdminDb().from("action_logs").insert({
+      family_id: data.familyId,
+      actor_user_id: userId,
+      action: "member_updated",
+      details: { member_id: data.memberId, fields: Object.keys(data.patch) },
+    });
+    await postLog(
+      data.familyId,
+      "actions",
+      `✏️ A'zo tahrirlandi: <code>${data.memberId}</code>\nMaydonlar: ${Object.keys(data.patch).join(", ")}`,
+    );
     return { ok: true };
   });
 
