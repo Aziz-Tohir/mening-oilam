@@ -61,6 +61,7 @@ export const setMemberStatus = createServerFn({ method: "POST" })
       action: "member_status_changed",
       details: { member_id: data.memberId, status: data.status },
     });
+    await postLog(data.familyId, "actions", `👤 A'zo statusi: <code>${data.memberId}</code> → <b>${data.status}</b>`);
     return { ok: true };
   });
 
