@@ -130,7 +130,7 @@ function DashboardHome() {
 
       {/* Birthdays */}
       <Card>
-        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar</CardTitle><CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} /></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2"><CardTitle>🎂 Yaqin tug'ilgan kunlar</CardTitle><CacheStatus ts={aggTs} stale={aggStale} loading={aggLoading && !aggregated} onRefresh={() => { invalidateCache("dashboard:"); refetchAgg(); }} /></CardHeader>
         <CardContent>
           {loading ? <p className="text-sm text-muted-foreground">Yuklanmoqda…</p>
             : bdays.length === 0 ? <p className="text-sm text-muted-foreground">Yaqin tug'ilgan kunlar yo'q.</p>
