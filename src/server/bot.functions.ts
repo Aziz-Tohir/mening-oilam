@@ -66,6 +66,7 @@ export const addWarning = createServerFn({ method: "POST" })
     if (m?.telegram_id) {
       try { await sendMessage(m.telegram_id, `⚠️ Sizga ogohlantirish berildi: ${data.reason}`); } catch {}
     }
+    await postLog(data.familyId, "moderation", `⚠️ Ogohlantirish: <b>${m?.full_name ?? data.memberId}</b>\nSabab: ${data.reason}`);
     return { ok: true };
   });
 
