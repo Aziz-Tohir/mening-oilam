@@ -936,9 +936,6 @@ async function handleBirthdayGreeting(cb: TgCallback, memberId: string) {
   }
 }
 
-function _escapeHtml_unused(s: string) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
 
 // ---------- helpers ----------
 function chunk<T>(arr: T[], size: number): T[][] {
