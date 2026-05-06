@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.apply_female_photo_default() FROM anon, authenticated, public;
