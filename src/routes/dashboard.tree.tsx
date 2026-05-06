@@ -86,16 +86,16 @@ function layoutDagre(nodes: Node[], edges: Edge[]) {
 }
 
 function TreePage() {
-  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 1_800_000 });
   const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
   const { data: memRes, refetch: refetchMembers, ts: memTs, stale: memStale, loading: memLoading } = useCachedServer<{ members: any[] }>(
-    `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+    `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
   const { data: relRes, refetch: refetchRels, ts: relTs, stale: relStale, loading: relLoading } = useCachedServer<{ relationships: any[] }>(
-    `rels:${familyId}`, listRelationships, { familyId }, { enabled: !!familyId, staleMs: 30_000 },
+    `rels:${familyId}`, listRelationships, { familyId }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
   const members = memRes?.members ?? [];
   const rels = relRes?.relationships ?? [];

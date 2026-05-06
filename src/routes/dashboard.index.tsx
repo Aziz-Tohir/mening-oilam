@@ -20,7 +20,7 @@ export const Route = createFileRoute("/dashboard/")({
 function DashboardHome() {
   const { isAdmin } = useUserRole();
   const { data: famRes, loading: famLoading, refetch: refetchFams, ts: famTs, stale: famStale } =
-    useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 60_000 });
+    useCachedServer<{ families: any[] }>("families:mine", listMyFamilies, undefined, { staleMs: 1_800_000 });
   const families = famRes?.families ?? [];
   const familyIds = families.map((f: any) => f.id).join(",");
 
@@ -46,7 +46,7 @@ function DashboardHome() {
       return { stats, events: allEvents, bdays: allBdays };
     },
     undefined,
-    { enabled: families.length > 0, staleMs: 60_000 },
+    { enabled: families.length > 0, staleMs: 1_800_000 },
   );
 
   const stats = aggregated?.stats ?? {};

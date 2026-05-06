@@ -37,7 +37,7 @@ type Membership = {
 
 function ProfilePage() {
   const { data, loading, refetch, ts, stale } = useCachedServer<{ memberships: Membership[] }>(
-    "profile:me", getMyMemberships, undefined, { staleMs: 60_000 },
+    "profile:me", getMyMemberships, undefined, { staleMs: 1_800_000 },
   );
   const memberships = data?.memberships ?? [];
   const [activeId, setActiveId] = useState<string>("");

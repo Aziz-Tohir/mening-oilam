@@ -50,7 +50,7 @@ export function invalidateCache(prefix?: string) {
  * @param key  unique cache key (include params, e.g. `events:${familyId}`)
  * @param fn   server function
  * @param payload  payload to pass
- * @param opts.staleMs  if cached data is fresher than this, skip network (default 30s)
+ * @param opts.staleMs  if cached data is fresher than this, skip network (default 30 min)
  */
 export function useCachedServer<T>(
   key: string,
@@ -58,7 +58,7 @@ export function useCachedServer<T>(
   payload?: any,
   opts: { staleMs?: number; enabled?: boolean } = {},
 ) {
-  const { staleMs = 30_000, enabled = true } = opts;
+  const { staleMs = 1_800_000, enabled = true } = opts;
   const initial = (() => {
     const m = memCache.get(key);
     if (m) return m;
