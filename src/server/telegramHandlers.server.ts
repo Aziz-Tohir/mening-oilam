@@ -143,7 +143,7 @@ async function handleAvatarPhoto(userId: number, msg: TgMessage) {
   const db = getAdminDb();
   const { data: members } = await db
     .from("family_members")
-    .select("id, family_id, user_id")
+    .select("id, family_id, user_id, families:family_id(name)")
     .eq("telegram_id", userId)
     .eq("status", "active");
 
@@ -156,21 +156,32 @@ async function handleAvatarPhoto(userId: number, msg: TgMessage) {
   const sizes = msg.photo as any[];
   const best = sizes[sizes.length - 1];
 
-  try {
-    const { setMemberAvatarFromTelegramFile } = await import("./avatar.server");
-    for (const m of members) {
-      await setMemberAvatarFromTelegramFile({
-        fileId: best.file_id,
-        memberId: m.id,
-        telegramId: userId,
-        userId: m.user_id,
-      });
-    }
-    await sendMessage(userId, `✅ Profil rasmingiz yangilandi (${members.length} oilada).`);
-  } catch (e: any) {
-    console.error("[bot] avatar upload failed", e);
-    await sendMessage(userId, "❌ Rasmni saqlab bo'lmadi. Keyinroq urinib ko'ring.");
+  // Stash the file_id and ask for confirmation before overwriting avatars
+  const { data: pending, error: pErr } = await db
+    .from("pending_avatar_uploads")
+    .insert({ telegram_id: userId, file_id: best.file_id } as never)
+    .select("id")
+    .single();
+  if (pErr || !pending) {
+    console.error("[bot] pending avatar insert failed", pErr);
+    await sendMessage(userId, "❌ Rasmni qabul qilib bo'lmadi. Qaytadan urinib ko'ring.");
+    return;
   }
+
+  const familyNames = (members as any[]).map(m => m.families?.name).filter(Boolean).join(", ");
+  const suffix = members.length > 1 ? ` (${members.length} oila: ${familyNames})` : familyNames ? ` (${familyNames})` : "";
+  await sendMessage(
+    userId,
+    `🖼 Shajara profil rasmingizni shu rasmga o'zgartiraymi?${suffix}`,
+    {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "✅ Ha, o'zgartirish", callback_data: `avok:${pending.id}` },
+          { text: "❌ Yo'q", callback_data: `avno:${pending.id}` },
+        ]],
+      },
+    },
+  );
 }
 
 // ---------- /start welcome message ----------
