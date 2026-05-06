@@ -405,6 +405,15 @@ async function approveJoinRequest(req: any) {
 
   if (memErr) throw memErr;
 
+  // Best-effort: pull Telegram profile photo as default avatar
+  try {
+    const { importTelegramPhotoForMember } = await import("./avatar.server");
+    await importTelegramPhotoForMember({
+      telegramId: req.applicant_telegram_id,
+      memberId: newMember!.id,
+    });
+  } catch (e) { console.error("[bot] tg photo import failed", e); }
+
   // Add relationship
   if (req.relative_member_id && req.relationship_type) {
     await db.from("relationships").insert({
