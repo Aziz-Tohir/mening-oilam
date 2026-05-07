@@ -29,6 +29,7 @@ import { Route as DashboardBotRouteImport } from './routes/dashboard.bot'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/telegram/poll'
 import { Route as ApiPublicTelegramMiniappAuthRouteImport } from './routes/api/public/telegram/miniapp-auth'
+import { Route as ApiPublicCronSentimentAnalysisRouteImport } from './routes/api/public/cron/sentiment-analysis'
 import { Route as ApiPublicCronProcessJoinRequestsRouteImport } from './routes/api/public/cron/process-join-requests'
 import { Route as ApiPublicCronDailyRemindersRouteImport } from './routes/api/public/cron/daily-reminders'
 import { Route as ApiPublicCronAnnualAwardsRouteImport } from './routes/api/public/cron/annual-awards'
@@ -135,6 +136,12 @@ const ApiPublicTelegramMiniappAuthRoute =
     path: '/api/public/telegram/miniapp-auth',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronSentimentAnalysisRoute =
+  ApiPublicCronSentimentAnalysisRouteImport.update({
+    id: '/api/public/cron/sentiment-analysis',
+    path: '/api/public/cron/sentiment-analysis',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronProcessJoinRequestsRoute =
   ApiPublicCronProcessJoinRequestsRouteImport.update({
     id: '/api/public/cron/process-join-requests',
@@ -175,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
+  '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -199,6 +207,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
+  '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -225,6 +234,7 @@ export interface FileRoutesById {
   '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
+  '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
+    | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
+    | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -301,6 +313,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
+    | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -313,6 +326,7 @@ export interface RootRouteChildren {
   ApiPublicCronAnnualAwardsRoute: typeof ApiPublicCronAnnualAwardsRoute
   ApiPublicCronDailyRemindersRoute: typeof ApiPublicCronDailyRemindersRoute
   ApiPublicCronProcessJoinRequestsRoute: typeof ApiPublicCronProcessJoinRequestsRoute
+  ApiPublicCronSentimentAnalysisRoute: typeof ApiPublicCronSentimentAnalysisRoute
   ApiPublicTelegramMiniappAuthRoute: typeof ApiPublicTelegramMiniappAuthRoute
   ApiPublicTelegramPollRoute: typeof ApiPublicTelegramPollRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
@@ -460,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramMiniappAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/sentiment-analysis': {
+      id: '/api/public/cron/sentiment-analysis'
+      path: '/api/public/cron/sentiment-analysis'
+      fullPath: '/api/public/cron/sentiment-analysis'
+      preLoaderRoute: typeof ApiPublicCronSentimentAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/process-join-requests': {
       id: '/api/public/cron/process-join-requests'
       path: '/api/public/cron/process-join-requests'
@@ -529,6 +550,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronAnnualAwardsRoute: ApiPublicCronAnnualAwardsRoute,
   ApiPublicCronDailyRemindersRoute: ApiPublicCronDailyRemindersRoute,
   ApiPublicCronProcessJoinRequestsRoute: ApiPublicCronProcessJoinRequestsRoute,
+  ApiPublicCronSentimentAnalysisRoute: ApiPublicCronSentimentAnalysisRoute,
   ApiPublicTelegramMiniappAuthRoute: ApiPublicTelegramMiniappAuthRoute,
   ApiPublicTelegramPollRoute: ApiPublicTelegramPollRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
@@ -536,3 +558,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
