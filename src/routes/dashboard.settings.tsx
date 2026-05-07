@@ -17,7 +17,7 @@ export const Route = createFileRoute("/dashboard/settings")({
 });
 
 function SettingsPage() {
-  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
+  const { data: famRes, loading: familiesLoading, error: familiesError } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
   const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
@@ -61,6 +61,8 @@ function SettingsPage() {
     } catch (e: any) { toast.error(e?.message ?? "Saqlab bo'lmadi"); }
   };
 
+  if (familiesError) return <p className="text-destructive">Oilalarni yuklab bo'lmadi: {familiesError.message}</p>;
+  if (!familyId && familiesLoading) return <p className="text-muted-foreground">Yuklanmoqda…</p>;
   if (!familyId && families.length === 0) return <p className="text-muted-foreground">Oila topilmadi.</p>;
   if (settingsError) return <p className="text-destructive">Sozlamalarni yuklab bo'lmadi: {settingsError.message}</p>;
   if (!settings) return <p className="text-muted-foreground">Yuklanmoqda…</p>;
