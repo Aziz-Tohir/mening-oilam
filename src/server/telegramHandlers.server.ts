@@ -171,6 +171,25 @@ async function handleMessage(msg: TgMessage) {
               message_date: today, messages_count: 1,
             });
           }
+
+          // Sentiment buffer — store text only if member hasn't opted out.
+          // Cron clears the buffer after analysis; raw text is never persisted long-term.
+          const msgText = (msg as any).text;
+          if (msgText && typeof msgText === "string" && msgText.trim().length >= 3 && !mem?.sentiment_opt_out) {
+            try {
+              const { createHash } = await import("crypto");
+              const trimmed = msgText.trim().slice(0, 1000);
+              const hash = createHash("sha256").update(`${family.id}:${trimmed}`).digest();
+              await db.from("daily_message_buffer").insert({
+                family_id: family.id,
+                telegram_id: msg.from.id,
+                member_id: mem?.id ?? null,
+                message_date: today,
+                text: trimmed,
+                text_hash: hash,
+              } as any);
+            } catch { /* dedupe conflict — silent */ }
+          }
         } catch (e) { console.warn("[stats] track failed", e); }
       }
 
