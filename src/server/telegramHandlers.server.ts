@@ -590,12 +590,19 @@ async function handleWizardInput(userId: number, msg: TgMessage): Promise<boolea
     }
     await db.from("user_roles").insert({ user_id: prof.user_id, family_id: fam.id, role: "superadmin" } as any);
     await db.from("family_settings").insert({ family_id: fam.id } as any);
-    await clearSession(userId);
+
+    // Mark this user's next group-add as the "link target" for the new family
+    await db.from("bot_sessions").upsert({
+      telegram_id: userId,
+      step: "pending_group_link",
+      data: { pending_link_family_id: fam.id, invite_code: fam.invite_code },
+      updated_at: new Date().toISOString(),
+    } as any);
 
     const botUser = (process.env.BOT_USERNAME ?? "").replace(/^@/, "");
     const addUrl = botUser ? `https://t.me/${botUser}?startgroup=${fam.invite_code}` : null;
     await sendMessage(userId, t("create_done", lang, { name: fam.name }), { parse_mode: "HTML" });
-    await sendMessage(userId, t("create_group_steps", lang), {
+    await sendMessage(userId, t("create_group_steps", lang) + `\n\n🔑 Taklif kodi: <code>${fam.invite_code}</code>\nAgar tugma ishlamasa: yangi guruh yarating, <code>@${botUser}</code> ni qo'shing va guruhda <code>/link ${fam.invite_code}</code> yuboring.`, {
       parse_mode: "HTML",
       reply_markup: addUrl ? { inline_keyboard: [[{ text: t("btn_add_to_group", lang), url: addUrl }]] } : undefined,
     });
