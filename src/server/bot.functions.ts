@@ -5,6 +5,18 @@ import { getAdminDb } from "./db.server";
 import { sendMessage, banChatMember, unbanChatMember, restrictChatMember } from "./telegram.server";
 import { postLog } from "./logChannel.server";
 
+// Defense-in-depth: explicitly verify the caller is an admin/superadmin of the
+// given family. RLS already enforces this on tables, but server functions that
+// call telegram.* APIs or use admin DB clients must check too.
+async function assertFamilyAdmin(supabase: any, userId: string, familyId: string) {
+  const { data, error } = await supabase.rpc("is_family_admin", {
+    _user_id: userId,
+    _family_id: familyId,
+  });
+  if (error) throw new Error(`Ruxsat tekshiruvi muvaffaqiyatsiz: ${error.message}`);
+  if (!data) throw new Error("Ruxsat etilmagan: faqat oila admini bajara oladi");
+}
+
 export const listBannedWords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
@@ -22,6 +34,7 @@ export const addBannedWord = createServerFn({ method: "POST" })
     action: z.enum(["delete","warn","kick"]).default("delete"),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { error } = await context.supabase.from("banned_words").insert({
       family_id: data.familyId, pattern: data.pattern, is_regex: data.isRegex, action: data.action, created_by: context.userId,
     } as any);
@@ -33,6 +46,7 @@ export const deleteBannedWord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid(), id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { error } = await context.supabase.from("banned_words").delete().eq("id", data.id).eq("family_id", data.familyId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -57,6 +71,7 @@ export const addWarning = createServerFn({ method: "POST" })
     familyId: z.string().uuid(), memberId: z.string().uuid(), reason: z.string().min(1).max(500),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { data: m } = await context.supabase.from("family_members").select("telegram_id, full_name").eq("id", data.memberId).maybeSingle();
     const { error } = await context.supabase.from("member_warnings").insert({
       family_id: data.familyId, member_id: data.memberId, telegram_id: m?.telegram_id,
@@ -74,6 +89,7 @@ export const clearWarnings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid(), memberId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { error } = await context.supabase.from("member_warnings").delete().eq("family_id", data.familyId).eq("member_id", data.memberId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -86,6 +102,7 @@ export const moderateMember = createServerFn({ method: "POST" })
     action: z.enum(["kick","ban","mute_1h","mute_24h","unban"]),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { data: family } = await context.supabase.from("families").select("telegram_group_id").eq("id", data.familyId).maybeSingle();
     const { data: member } = await context.supabase.from("family_members").select("telegram_id, full_name").eq("id", data.memberId).maybeSingle();
     if (!family?.telegram_group_id) throw new Error("Oilaning Telegram guruhi sozlanmagan");
@@ -118,6 +135,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
     genderFilter: z.enum(["all","male","female"]).default("all"),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const db = getAdminDb();
     let recipients = 0, failures = 0;
     const failedTargets: Array<{ telegram_id: number; member_id?: string; full_name?: string; error: string }> = [];
