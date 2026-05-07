@@ -10,7 +10,7 @@ export const getMyMemberships = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("family_members")
-      .select("id, family_id, full_name, birth_date, gender, phone, bio, photo_url, photo_is_private, username, telegram_id, status, families:family_id(id, name)")
+      .select("id, family_id, full_name, birth_date, gender, phone, bio, photo_url, photo_is_private, username, telegram_id, status, sentiment_opt_out, families:family_id(id, name)")
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { memberships: data ?? [] };
