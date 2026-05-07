@@ -39,7 +39,7 @@ function DashboardLayout() {
 
   // Telegram Mini App auto-login
   useEffect(() => {
-    if (loading || user || tgAuthing || !tgReady) return;
+    if (loading || user || tgAuthing || !tgReady || tgError) return;
     const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
     const initData = tg?.initData;
     if (!initData) return;
@@ -54,28 +54,62 @@ function DashboardLayout() {
           body: JSON.stringify({ initData }),
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json?.message ?? json?.error ?? "Login xatosi");
+        if (!res.ok) {
+          if (json?.error === "not_registered") {
+            setTgError({ kind: "not_registered", message: json.message ?? "Siz hech qaysi oilada a'zo emassiz." });
+            return;
+          }
+          if (json?.error === "pending") {
+            setTgError({ kind: "pending", message: json.message ?? "So'rov admin tasdig'ini kutmoqda." });
+            return;
+          }
+          throw new Error(json?.message ?? json?.error ?? `Login xatosi (${res.status})`);
+        }
         const { error } = await supabase.auth.verifyOtp({
           type: "magiclink",
           token_hash: json.token_hash,
         });
         if (error) throw error;
       } catch (e: any) {
-        toast.error(e?.message ?? "Telegram orqali kirish amalga oshmadi");
-        navigate({ to: "/login" });
+        setTgError({ kind: "other", message: e?.message ?? "Telegram orqali kirish amalga oshmadi" });
       } finally {
         setTgAuthing(false);
       }
     })();
-  }, [loading, user, tgAuthing, tgReady, navigate]);
+  }, [loading, user, tgAuthing, tgReady, tgError]);
 
   useEffect(() => {
     if (loading || tgAuthing || !tgReady) return;
-    if (!user) {
+    if (!user && !tgError) {
       const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
       if (!tg?.initData) navigate({ to: "/login" });
     }
-  }, [loading, user, tgAuthing, tgReady, navigate]);
+  }, [loading, user, tgAuthing, tgReady, tgError, navigate]);
+
+  const submitInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = inviteCode.trim().toUpperCase();
+    if (!code) return;
+    setInviting(true);
+    try {
+      const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
+      const initData = tg?.initData;
+      const res = await fetch("/api/public/telegram/miniapp-register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData, invite_code: code }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message ?? json?.error ?? `Xato (${res.status})`);
+      toast.success("So'rov yuborildi! Admin tasdiqlashidan keyin qayta kirib ko'ring.");
+      setTgError({ kind: "pending", message: "So'rovingiz adminga yuborildi. Tasdiqlangach mini-app'ga kira olasiz." });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Xato");
+    } finally {
+      setInviting(false);
+    }
+  };
+
 
   // Redirect non-admins away from admin-only pages
   useEffect(() => {
