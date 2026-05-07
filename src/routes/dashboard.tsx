@@ -20,6 +20,17 @@ function DashboardLayout() {
   const location = useLocation();
   const [tgAuthing, setTgAuthing] = useState(false);
 
+  // Lazy-load Telegram WebApp script (only on dashboard, not on landing)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ((window as any).Telegram?.WebApp) return;
+    if (document.querySelector('script[src="https://telegram.org/js/telegram-web-app.js"]')) return;
+    const s = document.createElement("script");
+    s.src = "https://telegram.org/js/telegram-web-app.js";
+    s.async = true;
+    document.head.appendChild(s);
+  }, []);
+
   // Telegram Mini App auto-login
   useEffect(() => {
     if (loading || user || tgAuthing) return;
