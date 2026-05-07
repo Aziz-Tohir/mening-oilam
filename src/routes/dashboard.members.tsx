@@ -127,6 +127,14 @@ function MembersPage() {
           onSaved={() => { invalidateCache(`members:${familyId}`); refetch(); setEditing(null); }}
         />
       )}
+
+      {adding && familyId && (
+        <AddMemberDialog
+          familyId={familyId}
+          onClose={() => setAdding(false)}
+          onSaved={() => { invalidateCache(`members:${familyId}`); refetch(); setAdding(false); }}
+        />
+      )}
     </div>
   );
 }
