@@ -156,9 +156,9 @@ async function handleMessage(msg: TgMessage) {
       // Track message stats (only if from a real user)
       if (msg.from && !msg.from.is_bot) {
         try {
+          const { getMemberByTelegramId } = await import("./cache.server");
           const today = new Date().toISOString().slice(0, 10);
-          const { data: mem } = await db.from("family_members")
-            .select("id").eq("family_id", family.id).eq("telegram_id", msg.from.id).maybeSingle();
+          const mem = await getMemberByTelegramId(family.id, msg.from.id);
           const { data: existing } = await db.from("messages_stats")
             .select("id, messages_count")
             .eq("family_id", family.id).eq("telegram_id", msg.from.id).eq("message_date", today)
@@ -185,8 +185,8 @@ async function handleMessage(msg: TgMessage) {
         else if (video?.file_id) { kind = "video"; fileId = video.file_id; }
         else if (doc?.file_id && (doc.mime_type ?? "").startsWith("image/")) { kind = "document"; fileId = doc.file_id; }
         if (kind && fileId && msg.from && !msg.from.is_bot) {
-          const { data: mem } = await db.from("family_members")
-            .select("id").eq("family_id", family.id).eq("telegram_id", msg.from.id).maybeSingle();
+          const { getMemberByTelegramId } = await import("./cache.server");
+          const mem = await getMemberByTelegramId(family.id, msg.from.id);
           await db.from("memories").insert({
             family_id: family.id,
             saved_by_telegram_id: msg.from.id,
