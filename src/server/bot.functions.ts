@@ -120,12 +120,18 @@ export const sendBroadcast = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const db = getAdminDb();
     let recipients = 0, failures = 0;
+    const failedTargets: Array<{ telegram_id: number; member_id?: string; full_name?: string; error: string }> = [];
     if (data.target === "group") {
       const { data: f } = await context.supabase.from("families").select("telegram_group_id").eq("id", data.familyId).maybeSingle();
       if (!f?.telegram_group_id) throw new Error("Guruh sozlanmagan");
-      try { await sendMessage(f.telegram_group_id, data.text); recipients = 1; } catch { failures = 1; }
+      try { await sendMessage(f.telegram_group_id, data.text); recipients = 1; }
+      catch (e: any) {
+        failures = 1;
+        failedTargets.push({ telegram_id: f.telegram_group_id, error: String(e?.message ?? e) });
+        console.warn(`[broadcast] group send failed → chat_id=${f.telegram_group_id}: ${e?.message ?? e}`);
+      }
     } else {
-      let q = context.supabase.from("family_members").select("telegram_id, gender").eq("family_id", data.familyId).eq("status", "active");
+      let q = context.supabase.from("family_members").select("id, telegram_id, full_name, gender").eq("family_id", data.familyId).eq("status", "active");
       if (data.genderFilter !== "all") q = q.eq("gender", data.genderFilter);
       const { data: members } = await q;
       // Telegram limit: ~30 msg/sec global DM. Throttle to ~20/sec (50ms between sends) to stay safely below.
@@ -138,6 +144,9 @@ export const sendBroadcast = createServerFn({ method: "POST" })
         try { await sendMessage(m.telegram_id, data.text); recipients++; }
         catch (e: any) {
           failures++;
+          const errMsg = String(e?.message ?? e);
+          failedTargets.push({ telegram_id: m.telegram_id, member_id: m.id, full_name: m.full_name ?? undefined, error: errMsg });
+          console.warn(`[broadcast] DM failed → tg_id=${m.telegram_id} member=${m.full_name ?? m.id}: ${errMsg}`);
           // If hit 429, honor retry_after
           const retryAfter = e?.response?.parameters?.retry_after ?? e?.parameters?.retry_after;
           if (typeof retryAfter === "number" && retryAfter > 0) {
@@ -150,9 +159,15 @@ export const sendBroadcast = createServerFn({ method: "POST" })
       family_id: data.familyId, target: data.target, message_text: data.text,
       sent_by_user_id: context.userId, recipients_count: recipients, failures_count: failures,
       gender_filter: data.genderFilter === "all" ? null : data.genderFilter,
+      failed_targets: failedTargets.length ? failedTargets : null,
     } as any);
-    await postLog(data.familyId, "actions", `📣 Broadcast (${data.target}, ${data.genderFilter}): ${recipients} ✓ / ${failures} ✗`);
-    return { recipients, failures };
+    let logMsg = `📣 Broadcast (${data.target}, ${data.genderFilter}): ${recipients} ✓ / ${failures} ✗`;
+    if (failedTargets.length) {
+      const preview = failedTargets.slice(0, 10).map(f => `• <code>${f.telegram_id}</code> ${f.full_name ? `(${escapeHtml(f.full_name)})` : ""} — ${escapeHtml(f.error)}`).join("\n");
+      logMsg += `\n\n<b>Yetkazilmagan:</b>\n${preview}${failedTargets.length > 10 ? `\n…va yana ${failedTargets.length - 10} ta` : ""}`;
+    }
+    await postLog(data.familyId, "actions", logMsg);
+    return { recipients, failures, failedTargets };
   });
 
 export const listBroadcasts = createServerFn({ method: "POST" })
