@@ -136,6 +136,61 @@ async function handleMessage(msg: TgMessage) {
 
   // Group events
   if (msg.chat.type !== "private") {
+    const text = (msg.text ?? "").trim();
+
+    // /link <CODE> — manually bind this group to a family
+    const linkMatch = text.match(/^\/link(?:@\S+)?\s+([A-Za-z0-9]+)/i);
+    if (linkMatch) {
+      const code = linkMatch[1].toUpperCase();
+      const adderTgId = msg.from?.id;
+      const { data: fam } = await db
+        .from("families")
+        .select("id, name, owner_user_id, telegram_group_id")
+        .eq("invite_code", code)
+        .maybeSingle();
+      if (!fam) {
+        await sendMessage(msg.chat.id, "❌ Taklif kodi noto'g'ri.");
+        return;
+      }
+      // Authorize: caller must be owner or superadmin (link via profile or roles)
+      let authorized = false;
+      if (adderTgId) {
+        const { data: prof } = await db.from("profiles").select("user_id").eq("telegram_id", adderTgId).maybeSingle();
+        if (prof?.user_id) {
+          if (prof.user_id === fam.owner_user_id) authorized = true;
+          if (!authorized) {
+            const { data: roles } = await db
+              .from("user_roles")
+              .select("role, family_id")
+              .eq("user_id", prof.user_id);
+            if ((roles ?? []).some((r: any) => r.role === "superadmin" || (r.role === "admin" && r.family_id === fam.id))) {
+              authorized = true;
+            }
+          }
+        }
+      }
+      if (!authorized) {
+        await sendMessage(msg.chat.id, "❌ Faqat oila egasi yoki superadmin guruhni ulashi mumkin.");
+        return;
+      }
+      if (fam.telegram_group_id && fam.telegram_group_id !== msg.chat.id) {
+        await sendMessage(msg.chat.id, "❌ Bu oila boshqa guruhga ulangan.");
+        return;
+      }
+      await db.from("families").update({
+        telegram_group_id: msg.chat.id,
+        telegram_group_title: msg.chat.title ?? null,
+      } as any).eq("id", fam.id);
+      await db.from("action_logs").insert({
+        family_id: fam.id,
+        action: "group_linked_manually",
+        actor_telegram_id: adderTgId ?? null,
+        details: { chat_id: msg.chat.id, title: msg.chat.title },
+      });
+      await sendMessage(msg.chat.id, `✅ Guruh <b>${fam.name}</b> oilasiga ulandi.\n⚠️ Iltimos meni admin qiling.`, { parse_mode: "HTML" });
+      return;
+    }
+
     const { getFamilyByChatId, getFamilySettings } = await import("./cache.server");
     const family = await getFamilyByChatId(msg.chat.id);
 
