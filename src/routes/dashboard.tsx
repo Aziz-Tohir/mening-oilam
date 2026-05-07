@@ -20,6 +20,9 @@ function DashboardLayout() {
   const location = useLocation();
   const [tgAuthing, setTgAuthing] = useState(false);
   const [tgReady, setTgReady] = useState(typeof window !== "undefined" && !!(window as any).Telegram?.WebApp);
+  const [tgError, setTgError] = useState<{ kind: "not_registered" | "pending" | "other"; message: string } | null>(null);
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviting, setInviting] = useState(false);
 
   // Lazy-load Telegram WebApp script (only on dashboard, not on landing)
   useEffect(() => {
