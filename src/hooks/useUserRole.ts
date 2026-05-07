@@ -38,5 +38,6 @@ export function useUserRole() {
   }, [user, authLoading]);
 
   const isAdmin = role === "admin" || role === "superadmin";
-  return { role, familyId, isAdmin, loading: loading || authLoading };
+  const isSuperadmin = role === "superadmin";
+  return { role, familyId, isAdmin, isSuperadmin, loading: loading || authLoading };
 }
