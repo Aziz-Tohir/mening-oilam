@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers, listRelationships, addRelationship } from "@/server/admin.functions";
@@ -112,6 +113,11 @@ function TreePage() {
   const [hideInactive, setHideInactive] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
   const [pendingConn, setPendingConn] = useState<{ source: string; target: string } | null>(null);
+  const [relWizardOpen, setRelWizardOpen] = useState(false);
+  const [wizFrom, setWizFrom] = useState<string>("");
+  const [wizTo, setWizTo] = useState<string>("");
+  const [wizSearchFrom, setWizSearchFrom] = useState("");
+  const [wizSearchTo, setWizSearchTo] = useState("");
   const [newRelType, setNewRelType] = useState("father");
   const flowWrap = useRef<HTMLDivElement>(null);
   const exportJson = async () => {
@@ -177,19 +183,28 @@ function TreePage() {
     setPendingConn({ source: c.source, target: c.target });
   }, []);
 
-  const confirmAddRel = async () => {
-    if (!pendingConn) return;
+  const submitRel = async (source: string, target: string, type: string, onDone: () => void) => {
+    if (!source || !target || source === target) { toast.error("Ikki har xil a'zo tanlang"); return; }
     try {
       await callServer(addRelationship, {
-        familyId,
-        memberId1: pendingConn.source,
-        memberId2: pendingConn.target,
-        relationshipType: newRelType,
+        familyId, memberId1: source, memberId2: target, relationshipType: type,
       });
       toast.success("Aloqa qo'shildi");
-      setPendingConn(null);
+      onDone();
       reload();
     } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
+  };
+
+  const confirmAddRel = async () => {
+    if (!pendingConn) return;
+    await submitRel(pendingConn.source, pendingConn.target, newRelType, () => setPendingConn(null));
+  };
+
+  const confirmWizard = async () => {
+    await submitRel(wizFrom, wizTo, newRelType, () => {
+      setRelWizardOpen(false);
+      setWizFrom(""); setWizTo(""); setWizSearchFrom(""); setWizSearchTo("");
+    });
   };
 
   const exportPng = async () => {
@@ -227,6 +242,7 @@ function TreePage() {
             <Checkbox checked={hideInactive} onCheckedChange={(v) => setHideInactive(!!v)} />
             Faqat faollar
           </label>
+          <Button size="sm" onClick={() => setRelWizardOpen(true)}>+ Yangi aloqa</Button>
           <Button variant="outline" size="sm" onClick={exportPng}>PNG</Button>
           <Button variant="outline" size="sm" onClick={exportJson}>JSON</Button>
         </div>
@@ -235,7 +251,7 @@ function TreePage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
-            A'zoga bosing — profil ochiladi. Ikki node'ni torting — yangi aloqa qo'shasiz.
+            <span className="font-semibold text-foreground">+ Yangi aloqa</span> tugmasini bosing yoki ikki node'ni bir-biriga torting. A'zoga bosing — profil ochiladi.
           </CardTitle>
         </CardHeader>
         <CardContent className="p-2 sm:p-4">
@@ -318,6 +334,87 @@ function TreePage() {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setPendingConn(null)}>Bekor qilish</Button>
             <Button onClick={confirmAddRel}>Qo'shish</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={relWizardOpen} onOpenChange={(o) => { if (!o) { setRelWizardOpen(false); setWizFrom(""); setWizTo(""); } else setRelWizardOpen(true); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Yangi aloqa qo'shish</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const activeMembers = members.filter((m: any) => m.status === "active");
+            const PersonPicker = ({ label, value, setValue, search, setSearch, exclude }: any) => {
+              const sel = members.find((m: any) => m.id === value);
+              const list = activeMembers
+                .filter((m: any) => m.id !== exclude)
+                .filter((m: any) => !search || (m.full_name ?? "").toLowerCase().includes(search.toLowerCase()))
+                .slice(0, 50);
+              return (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">{label}</Label>
+                  {sel ? (
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 p-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {sel.photo_url ? (
+                          <img src={sel.photo_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                            {(sel.full_name ?? "?").split(" ").map((s: string) => s[0]).slice(0,2).join("")}
+                          </div>
+                        )}
+                        <span className="truncate text-sm font-medium">{sel.full_name}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setValue("")}>O'zgartirish</Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input placeholder="Ism bo'yicha qidirish…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                      <div className="max-h-48 overflow-y-auto rounded-md border border-border divide-y divide-border">
+                        {list.length === 0 && <div className="p-3 text-center text-xs text-muted-foreground">Topilmadi</div>}
+                        {list.map((m: any) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => { setValue(m.id); setSearch(""); }}
+                            className="flex w-full items-center gap-2 p-2 text-left text-sm hover:bg-muted transition"
+                          >
+                            {m.photo_url ? (
+                              <img src={m.photo_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+                            ) : (
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+                                {(m.full_name ?? "?").split(" ").map((s: string) => s[0]).slice(0,2).join("")}
+                              </div>
+                            )}
+                            <span className="truncate">{m.full_name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            };
+            return (
+              <div className="space-y-4">
+                <PersonPicker label="1-shaxs (kim?)" value={wizFrom} setValue={setWizFrom} search={wizSearchFrom} setSearch={setWizSearchFrom} exclude={wizTo} />
+                <PersonPicker label="2-shaxs (kimga?)" value={wizTo} setValue={setWizTo} search={wizSearchTo} setSearch={setWizSearchTo} exclude={wizFrom} />
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Aloqa turi</Label>
+                  <Select value={newRelType} onValueChange={setNewRelType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {REL_TYPES.map((t) => <SelectItem key={t} value={t}>{REL_LABELS[t] ?? t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setRelWizardOpen(false); setWizFrom(""); setWizTo(""); }}>Bekor qilish</Button>
+            <Button onClick={confirmWizard} disabled={!wizFrom || !wizTo}>Qo'shish</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
