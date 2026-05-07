@@ -166,6 +166,7 @@ export type Database = {
       bot_broadcasts: {
         Row: {
           created_at: string
+          failed_targets: Json | null
           failures_count: number
           family_id: string
           gender_filter: string | null
@@ -177,6 +178,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          failed_targets?: Json | null
           failures_count?: number
           family_id: string
           gender_filter?: string | null
@@ -188,6 +190,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          failed_targets?: Json | null
           failures_count?: number
           family_id?: string
           gender_filter?: string | null
