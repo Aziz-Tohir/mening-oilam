@@ -5,6 +5,18 @@ import { getAdminDb } from "./db.server";
 import { sendMessage, banChatMember, unbanChatMember, restrictChatMember } from "./telegram.server";
 import { postLog } from "./logChannel.server";
 
+// Defense-in-depth: explicitly verify the caller is an admin/superadmin of the
+// given family. RLS already enforces this on tables, but server functions that
+// call telegram.* APIs or use admin DB clients must check too.
+async function assertFamilyAdmin(supabase: any, userId: string, familyId: string) {
+  const { data, error } = await supabase.rpc("is_family_admin", {
+    _user_id: userId,
+    _family_id: familyId,
+  });
+  if (error) throw new Error(`Ruxsat tekshiruvi muvaffaqiyatsiz: ${error.message}`);
+  if (!data) throw new Error("Ruxsat etilmagan: faqat oila admini bajara oladi");
+}
+
 export const listBannedWords = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
