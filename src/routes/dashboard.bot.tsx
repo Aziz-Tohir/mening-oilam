@@ -260,6 +260,7 @@ function BroadcastTab({ familyId }: { familyId: string }) {
   const [target, setTarget] = useState<"group"|"members">("group");
   const [genderFilter, setGenderFilter] = useState<"all"|"male"|"female">("all");
   const [text, setText] = useState("");
+  const [useHtml, setUseHtml] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [sending, setSending] = useState(false);
   const reload = () => callServer(listBroadcasts, { familyId }).then(r => setHistory(r.items));
@@ -268,12 +269,29 @@ function BroadcastTab({ familyId }: { familyId: string }) {
     if (!text.trim()) return;
     setSending(true);
     try {
-      const r = await callServer(sendBroadcast, { familyId, target, text, genderFilter });
+      const r = await callServer(sendBroadcast, { familyId, target, text, genderFilter, parseMode: useHtml ? "HTML" : "none" });
       toast.success(`Yuborildi: ${r.recipients}, xato: ${r.failures}`);
       setText(""); reload();
     } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
     setSending(false);
   };
+
+  // Minimal HTML preview: only allow Telegram-supported tags; escape everything else.
+  const renderPreview = (raw: string, html: boolean) => {
+    const escaped = raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    if (!html) return escaped.replace(/\n/g, "<br/>");
+    // Allow a safe subset: b, strong, i, em, u, s, code, pre, a href
+    let out = escaped;
+    const allow = (tag: string) => {
+      out = out.replace(new RegExp(`&lt;${tag}&gt;`, "gi"), `<${tag}>`);
+      out = out.replace(new RegExp(`&lt;/${tag}&gt;`, "gi"), `</${tag}>`);
+    };
+    ["b","strong","i","em","u","s","code","pre"].forEach(allow);
+    out = out.replace(/&lt;a href=&quot;([^&]+)&quot;&gt;/gi, '<a href="$1" target="_blank" rel="noopener">');
+    out = out.replace(/&lt;\/a&gt;/gi, "</a>");
+    return out.replace(/\n/g, "<br/>");
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -298,7 +316,19 @@ function BroadcastTab({ familyId }: { familyId: string }) {
               </Select>
             )}
           </div>
-          <Textarea rows={4} value={text} onChange={e => setText(e.target.value)} placeholder="Xabar matnini yozing..." />
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="bcast-html" className="text-sm">HTML formatlash (b, i, u, s, code, pre, a)</Label>
+            <Switch id="bcast-html" checked={useHtml} onCheckedChange={setUseHtml} />
+          </div>
+          <Textarea rows={4} value={text} onChange={e => setText(e.target.value)} placeholder={useHtml ? "Masalan: <b>Salom</b> oila!" : "Xabar matnini yozing..."} />
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            <div className="mb-1 text-xs text-muted-foreground">Ko'rinish (Telegramda taxminan):</div>
+            {text.trim() ? (
+              <div className="whitespace-pre-wrap break-words text-sm" dangerouslySetInnerHTML={{ __html: renderPreview(text, useHtml) }} />
+            ) : (
+              <div className="text-sm text-muted-foreground">Matn kiriting…</div>
+            )}
+          </div>
           <Button onClick={send} disabled={sending || !text.trim()}>{sending ? "Yuborilmoqda…" : "Yuborish"}</Button>
         </CardContent>
       </Card>
