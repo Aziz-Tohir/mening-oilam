@@ -128,10 +128,22 @@ export const sendBroadcast = createServerFn({ method: "POST" })
       let q = context.supabase.from("family_members").select("telegram_id, gender").eq("family_id", data.familyId).eq("status", "active");
       if (data.genderFilter !== "all") q = q.eq("gender", data.genderFilter);
       const { data: members } = await q;
+      // Telegram limit: ~30 msg/sec global DM. Throttle to ~20/sec (50ms between sends) to stay safely below.
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      let first = true;
       for (const m of members ?? []) {
         if (!m.telegram_id) continue;
+        if (!first) await sleep(50);
+        first = false;
         try { await sendMessage(m.telegram_id, data.text); recipients++; }
-        catch { failures++; }
+        catch (e: any) {
+          failures++;
+          // If hit 429, honor retry_after
+          const retryAfter = e?.response?.parameters?.retry_after ?? e?.parameters?.retry_after;
+          if (typeof retryAfter === "number" && retryAfter > 0) {
+            await sleep(Math.min(retryAfter, 30) * 1000);
+          }
+        }
       }
     }
     await db.from("bot_broadcasts").insert({
