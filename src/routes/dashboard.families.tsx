@@ -74,7 +74,16 @@ function FamiliesAdminPage() {
                   {f.owner?.display_name || f.owner?.email || <span className="font-mono text-xs">{f.owner_user_id.slice(0, 8)}…</span>}
                 </td>
                 <td className="p-3">{f.members_count}</td>
-                <td className="p-3 text-muted-foreground">{f.telegram_group_title || "—"}</td>
+                <td className="p-3 text-muted-foreground">
+                  {f.telegram_group_id ? (
+                    <div className="flex flex-col">
+                      <span>{f.telegram_group_title || "—"}</span>
+                      <span className="font-mono text-xs">{f.telegram_group_id}</span>
+                    </div>
+                  ) : (
+                    <span className="text-amber-600 dark:text-amber-400 text-xs">Ulanmagan</span>
+                  )}
+                </td>
                 <td className="p-3 text-muted-foreground">{new Date(f.created_at).toLocaleDateString()}</td>
                 <td className="p-3">
                   <div className="flex justify-end gap-1">
