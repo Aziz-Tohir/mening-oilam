@@ -275,27 +275,48 @@ function TreePage() {
       </Dialog>
 
       <Dialog open={!!pendingConn} onOpenChange={(o) => !o && setPendingConn(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Yangi aloqa</DialogTitle></DialogHeader>
-          {pendingConn && (
-            <div className="space-y-3 text-sm">
-              <p>
-                <b>{members.find((m) => m.id === pendingConn.source)?.full_name}</b> →{" "}
-                <b>{members.find((m) => m.id === pendingConn.target)?.full_name}</b>
-              </p>
-              <div>
-                <Label>Aloqa turi</Label>
-                <Select value={newRelType} onValueChange={setNewRelType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {REL_TYPES.map((t) => <SelectItem key={t} value={t}>{REL_LABELS[t] ?? t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Yangi aloqa qo'shish</DialogTitle>
+          </DialogHeader>
+          {pendingConn && (() => {
+            const from = members.find((m) => m.id === pendingConn.source);
+            const to = members.find((m) => m.id === pendingConn.target);
+            const Avatar = ({ m }: { m: any }) => (
+              <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                {m?.photo_url ? (
+                  <img src={m.photo_url} alt="" className="h-14 w-14 rounded-full object-cover border-2 border-border" />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-base font-semibold border-2 border-border">
+                    {(m?.full_name ?? "?").split(" ").map((s: string) => s[0]).slice(0,2).join("")}
+                  </div>
+                )}
+                <div className="text-xs font-medium text-center truncate w-full">{m?.full_name}</div>
               </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingConn(null)}>Bekor</Button>
+            );
+            return (
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                  <Avatar m={from} />
+                  <div className="text-2xl text-muted-foreground shrink-0">→</div>
+                  <Avatar m={to} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    <b>{from?.full_name?.split(" ")[0]}</b> kim bo'ladi <b>{to?.full_name?.split(" ")[0]}</b>ga?
+                  </Label>
+                  <Select value={newRelType} onValueChange={setNewRelType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {REL_TYPES.map((t) => <SelectItem key={t} value={t}>{REL_LABELS[t] ?? t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setPendingConn(null)}>Bekor qilish</Button>
             <Button onClick={confirmAddRel}>Qo'shish</Button>
           </DialogFooter>
         </DialogContent>
