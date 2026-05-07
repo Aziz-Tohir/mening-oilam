@@ -17,6 +17,7 @@ import { Route as DashboardUpdatesRouteImport } from './routes/dashboard.updates
 import { Route as DashboardTreeRouteImport } from './routes/dashboard.tree'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard.stats'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
+import { Route as DashboardSentimentRouteImport } from './routes/dashboard.sentiment'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardMemoriesRouteImport } from './routes/dashboard.memories'
@@ -29,6 +30,7 @@ import { Route as DashboardBotRouteImport } from './routes/dashboard.bot'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/telegram/poll'
 import { Route as ApiPublicTelegramMiniappAuthRouteImport } from './routes/api/public/telegram/miniapp-auth'
+import { Route as ApiPublicCronSentimentAnalysisRouteImport } from './routes/api/public/cron/sentiment-analysis'
 import { Route as ApiPublicCronProcessJoinRequestsRouteImport } from './routes/api/public/cron/process-join-requests'
 import { Route as ApiPublicCronDailyRemindersRouteImport } from './routes/api/public/cron/daily-reminders'
 import { Route as ApiPublicCronAnnualAwardsRouteImport } from './routes/api/public/cron/annual-awards'
@@ -71,6 +73,11 @@ const DashboardStatsRoute = DashboardStatsRouteImport.update({
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSentimentRoute = DashboardSentimentRouteImport.update({
+  id: '/sentiment',
+  path: '/sentiment',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardRequestsRoute = DashboardRequestsRouteImport.update({
@@ -135,6 +142,12 @@ const ApiPublicTelegramMiniappAuthRoute =
     path: '/api/public/telegram/miniapp-auth',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronSentimentAnalysisRoute =
+  ApiPublicCronSentimentAnalysisRouteImport.update({
+    id: '/api/public/cron/sentiment-analysis',
+    path: '/api/public/cron/sentiment-analysis',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronProcessJoinRequestsRoute =
   ApiPublicCronProcessJoinRequestsRouteImport.update({
     id: '/api/public/cron/process-join-requests',
@@ -167,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
+  '/dashboard/sentiment': typeof DashboardSentimentRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -175,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
+  '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -191,6 +206,7 @@ export interface FileRoutesByTo {
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
+  '/dashboard/sentiment': typeof DashboardSentimentRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -199,6 +215,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
+  '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -217,6 +234,7 @@ export interface FileRoutesById {
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
+  '/dashboard/sentiment': typeof DashboardSentimentRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -225,6 +243,7 @@ export interface FileRoutesById {
   '/api/public/cron/annual-awards': typeof ApiPublicCronAnnualAwardsRoute
   '/api/public/cron/daily-reminders': typeof ApiPublicCronDailyRemindersRoute
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
+  '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -244,6 +263,7 @@ export interface FileRouteTypes {
     | '/dashboard/memories'
     | '/dashboard/profile'
     | '/dashboard/requests'
+    | '/dashboard/sentiment'
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/tree'
@@ -252,6 +272,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
+    | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -268,6 +289,7 @@ export interface FileRouteTypes {
     | '/dashboard/memories'
     | '/dashboard/profile'
     | '/dashboard/requests'
+    | '/dashboard/sentiment'
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/tree'
@@ -276,6 +298,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
+    | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -293,6 +316,7 @@ export interface FileRouteTypes {
     | '/dashboard/memories'
     | '/dashboard/profile'
     | '/dashboard/requests'
+    | '/dashboard/sentiment'
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/tree'
@@ -301,6 +325,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/annual-awards'
     | '/api/public/cron/daily-reminders'
     | '/api/public/cron/process-join-requests'
+    | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
@@ -313,6 +338,7 @@ export interface RootRouteChildren {
   ApiPublicCronAnnualAwardsRoute: typeof ApiPublicCronAnnualAwardsRoute
   ApiPublicCronDailyRemindersRoute: typeof ApiPublicCronDailyRemindersRoute
   ApiPublicCronProcessJoinRequestsRoute: typeof ApiPublicCronProcessJoinRequestsRoute
+  ApiPublicCronSentimentAnalysisRoute: typeof ApiPublicCronSentimentAnalysisRoute
   ApiPublicTelegramMiniappAuthRoute: typeof ApiPublicTelegramMiniappAuthRoute
   ApiPublicTelegramPollRoute: typeof ApiPublicTelegramPollRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
@@ -374,6 +400,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/dashboard/settings'
       preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/sentiment': {
+      id: '/dashboard/sentiment'
+      path: '/sentiment'
+      fullPath: '/dashboard/sentiment'
+      preLoaderRoute: typeof DashboardSentimentRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/requests': {
@@ -460,6 +493,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramMiniappAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/sentiment-analysis': {
+      id: '/api/public/cron/sentiment-analysis'
+      path: '/api/public/cron/sentiment-analysis'
+      fullPath: '/api/public/cron/sentiment-analysis'
+      preLoaderRoute: typeof ApiPublicCronSentimentAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/process-join-requests': {
       id: '/api/public/cron/process-join-requests'
       path: '/api/public/cron/process-join-requests'
@@ -494,6 +534,7 @@ interface DashboardRouteChildren {
   DashboardMemoriesRoute: typeof DashboardMemoriesRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardRequestsRoute: typeof DashboardRequestsRoute
+  DashboardSentimentRoute: typeof DashboardSentimentRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardStatsRoute: typeof DashboardStatsRoute
   DashboardTreeRoute: typeof DashboardTreeRoute
@@ -511,6 +552,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardMemoriesRoute: DashboardMemoriesRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardRequestsRoute: DashboardRequestsRoute,
+  DashboardSentimentRoute: DashboardSentimentRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardStatsRoute: DashboardStatsRoute,
   DashboardTreeRoute: DashboardTreeRoute,
@@ -529,6 +571,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronAnnualAwardsRoute: ApiPublicCronAnnualAwardsRoute,
   ApiPublicCronDailyRemindersRoute: ApiPublicCronDailyRemindersRoute,
   ApiPublicCronProcessJoinRequestsRoute: ApiPublicCronProcessJoinRequestsRoute,
+  ApiPublicCronSentimentAnalysisRoute: ApiPublicCronSentimentAnalysisRoute,
   ApiPublicTelegramMiniappAuthRoute: ApiPublicTelegramMiniappAuthRoute,
   ApiPublicTelegramPollRoute: ApiPublicTelegramPollRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,

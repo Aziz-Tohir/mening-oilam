@@ -261,6 +261,39 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_message_buffer: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: number
+          member_id: string | null
+          message_date: string
+          telegram_id: number
+          text: string
+          text_hash: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: number
+          member_id?: string | null
+          message_date: string
+          telegram_id: number
+          text: string
+          text_hash: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: number
+          member_id?: string | null
+          message_date?: string
+          telegram_id?: number
+          text?: string
+          text_hash?: string
+        }
+        Relationships: []
+      }
       event_rsvps: {
         Row: {
           event_id: string
@@ -392,6 +425,7 @@ export type Database = {
           relationship_to_inviter:
             | Database["public"]["Enums"]["relationship_type"]
             | null
+          sentiment_opt_out: boolean
           status: Database["public"]["Enums"]["member_status"]
           telegram_id: number
           updated_at: string
@@ -415,6 +449,7 @@ export type Database = {
           relationship_to_inviter?:
             | Database["public"]["Enums"]["relationship_type"]
             | null
+          sentiment_opt_out?: boolean
           status?: Database["public"]["Enums"]["member_status"]
           telegram_id: number
           updated_at?: string
@@ -438,6 +473,7 @@ export type Database = {
           relationship_to_inviter?:
             | Database["public"]["Enums"]["relationship_type"]
             | null
+          sentiment_opt_out?: boolean
           status?: Database["public"]["Enums"]["member_status"]
           telegram_id?: number
           updated_at?: string

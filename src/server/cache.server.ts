@@ -68,13 +68,13 @@ export async function getBannedWords(familyId: string): Promise<Array<{ pattern:
   return rows;
 }
 
-export async function getMemberByTelegramId(familyId: string, telegramId: number): Promise<{ id: string; full_name?: string } | null> {
+export async function getMemberByTelegramId(familyId: string, telegramId: number): Promise<{ id: string; full_name?: string; sentiment_opt_out?: boolean } | null> {
   const key = `mem:${familyId}:${telegramId}`;
   const cached = get<any>(key);
   if (cached !== undefined) return cached;
   const { data } = await getAdminDb()
     .from("family_members")
-    .select("id, full_name")
+    .select("id, full_name, sentiment_opt_out")
     .eq("family_id", familyId)
     .eq("telegram_id", telegramId)
     .maybeSingle();

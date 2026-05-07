@@ -171,6 +171,25 @@ async function handleMessage(msg: TgMessage) {
               message_date: today, messages_count: 1,
             });
           }
+
+          // Sentiment buffer — store text only if member hasn't opted out.
+          // Cron clears the buffer after analysis; raw text is never persisted long-term.
+          const msgText = (msg as any).text;
+          if (msgText && typeof msgText === "string" && msgText.trim().length >= 3 && !mem?.sentiment_opt_out) {
+            try {
+              const { createHash } = await import("crypto");
+              const trimmed = msgText.trim().slice(0, 1000);
+              const hash = createHash("sha256").update(`${family.id}:${trimmed}`).digest();
+              await db.from("daily_message_buffer").insert({
+                family_id: family.id,
+                telegram_id: msg.from.id,
+                member_id: mem?.id ?? null,
+                message_date: today,
+                text: trimmed,
+                text_hash: hash,
+              } as any);
+            } catch { /* dedupe conflict — silent */ }
+          }
         } catch (e) { console.warn("[stats] track failed", e); }
       }
 
@@ -243,6 +262,11 @@ async function handleMessage(msg: TgMessage) {
 
   if (text.startsWith("/yordam")) {
     await handleHelpRequest(userId, msg.from, text.replace(/^\/yordam(@\S+)?\s*/, ""));
+    return;
+  }
+
+  if (text === "/privacy" || text === "/maxfiylik") {
+    await sendPrivacyMenu(userId);
     return;
   }
 
@@ -677,15 +701,48 @@ async function handleRelativeInput(userId: number, msg: TgMessage) {
   );
 }
 
+// ---------- privacy (sentiment opt-in/out) ----------
+async function sendPrivacyMenu(userId: number) {
+  const db = getAdminDb();
+  const { data: members } = await db.from("family_members")
+    .select("id, family_id, sentiment_opt_out, families:family_id(name)")
+    .eq("telegram_id", userId);
+  const list = (members ?? []) as any[];
+  if (!list.length) {
+    await sendMessage(userId, "Siz hech qaysi oilada a'zo emassiz.");
+    return;
+  }
+  const txt =
+    "🔒 <b>Maxfiylik</b>\n\n" +
+    "Bot kun davomida guruh xabarlaringizning umumiy ruhiy ohangini AI orqali tahlil qiladi (faqat 0..1 raqam saqlanadi, matn saqlanmaydi).\n" +
+    "Quyida har bir oila uchun tahlilni yoqib/o'chira olasiz.";
+  const buttons = list.map((m: any) => [{
+    text: `${m.sentiment_opt_out ? "🔕 O'chirilgan" : "🔔 Yoqilgan"} — ${m.families?.name ?? "Oila"}`,
+    callback_data: `priv:${m.id}:${m.sentiment_opt_out ? "0" : "1"}`,
+  }]);
+  await sendMessage(userId, txt, { parse_mode: "HTML", reply_markup: { inline_keyboard: buttons } });
+}
+
 // ---------- callbacks ----------
 async function handleCallback(cb: TgCallback) {
   const data = cb.data ?? "";
   const db = getAdminDb();
 
+  if (data.startsWith("priv:")) {
+    const [, memberId, optStr] = data.split(":");
+    const optOut = optStr === "1"; // pressing toggles to this value
+    await db.from("family_members").update({ sentiment_opt_out: optOut } as any).eq("id", memberId);
+    await answerCallbackQuery(cb.id, optOut ? "Tahlil o'chirildi" : "Tahlil yoqildi");
+    await sendPrivacyMenu(cb.from.id);
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    return;
+  }
+
   if (data.startsWith("avok:") || data.startsWith("avno:")) {
     await handleAvatarConfirm(cb, data);
     return;
   }
+
 
   if (data.startsWith("pickfam:")) {
     const familyId = data.split(":")[1];

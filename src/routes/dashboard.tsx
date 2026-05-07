@@ -98,6 +98,7 @@ function DashboardLayout() {
     ["/dashboard/events", "Tadbirlar", "all"],
     ["/dashboard/tree", "Daraxt", "all"],
     ["/dashboard/stats", "Statistika", "all"],
+    ["/dashboard/sentiment", "Ruhiy holat", "all"],
     ["/dashboard/memories", "Xotiralar", "all"],
     ["/dashboard/kinship", "Kim kimga?", "all"],
     ["/dashboard/profile", "Profil", "all"],
