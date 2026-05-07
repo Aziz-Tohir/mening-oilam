@@ -89,7 +89,7 @@ function SettingsPage() {
             <Row label="Xush kelibsiz xabari auto-delete (sek)">
               <Input type="number" className="w-24" value={settings.welcome_message_auto_delete_seconds ?? 0}
                 onBlur={(e) => save({ welcome_message_auto_delete_seconds: Number(e.target.value) })}
-                onChange={(e) => setSettings({ ...settings, welcome_message_auto_delete_seconds: Number(e.target.value) })} />
+                onChange={(e) => setSettingsLocal({ ...settings, welcome_message_auto_delete_seconds: Number(e.target.value) })} />
             </Row>
           </CardContent>
         </Card>
@@ -106,12 +106,12 @@ function SettingsPage() {
             <Row label="Admin javobsiz so'rovni avto-tasdiqlash (soat, 0=o'chirilgan)">
               <Input type="number" className="w-24" value={settings.join_request_auto_approve_timeout_hours ?? 0}
                 onBlur={(e) => save({ join_request_auto_approve_timeout_hours: Number(e.target.value) })}
-                onChange={(e) => setSettings({ ...settings, join_request_auto_approve_timeout_hours: Number(e.target.value) })} />
+                onChange={(e) => setSettingsLocal({ ...settings, join_request_auto_approve_timeout_hours: Number(e.target.value) })} />
             </Row>
             <Row label="Admin javobsiz so'rovni avto-rad etish (soat)">
               <Input type="number" className="w-24" value={settings.join_request_auto_reject_timeout_hours ?? 0}
                 onBlur={(e) => save({ join_request_auto_reject_timeout_hours: Number(e.target.value) })}
-                onChange={(e) => setSettings({ ...settings, join_request_auto_reject_timeout_hours: Number(e.target.value) })} />
+                onChange={(e) => setSettingsLocal({ ...settings, join_request_auto_reject_timeout_hours: Number(e.target.value) })} />
             </Row>
           </CardContent>
         </Card>
@@ -183,27 +183,27 @@ function SettingsPage() {
             <Row label="Log guruh chat ID (forum)">
               <Input className="w-44" type="number" value={settings.log_telegram_chat_id ?? ""}
                 onBlur={(e) => save({ log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Amallar (action_logs)">
               <Input className="w-32" type="number" value={settings.log_topic_actions ?? ""}
                 onBlur={(e) => save({ log_topic_actions: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_actions: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_actions: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Admin (qo'shilish so'rovlari)">
               <Input className="w-32" type="number" value={settings.log_topic_admin ?? ""}
                 onBlur={(e) => save({ log_topic_admin: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_admin: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_admin: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Moderatsiya (delete/mute/ban)">
               <Input className="w-32" type="number" value={settings.log_topic_moderation ?? ""}
                 onBlur={(e) => save({ log_topic_moderation: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_moderation: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_moderation: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Backup (JSON dump)">
               <Input className="w-32" type="number" value={settings.log_topic_backup ?? ""}
                 onBlur={(e) => save({ log_topic_backup: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_backup: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_backup: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Backup chastotasi">
               <Select value={settings.backup_frequency ?? "weekly"} onValueChange={(v) => save({ backup_frequency: v })}>
