@@ -10,7 +10,7 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardLayout,
 });
 
-const ADMIN_ONLY_PATHS = ["/dashboard/members", "/dashboard/requests", "/dashboard/bot", "/dashboard/settings", "/dashboard/updates"];
+const ADMIN_ONLY_PATHS = ["/dashboard/members", "/dashboard/requests", "/dashboard/bot", "/dashboard/settings", "/dashboard/updates", "/dashboard/logs"];
 const SUPERADMIN_ONLY_PATHS = ["/dashboard/families"];
 
 function DashboardLayout() {
@@ -104,6 +104,7 @@ function DashboardLayout() {
     ["/dashboard/bot", "Bot", "admin"],
     ["/dashboard/settings", "Sozlamalar", "admin"],
     ["/dashboard/updates", "Updates", "admin"],
+    ["/dashboard/logs", "Loglar", "admin"],
     ["/dashboard/families", "Oilalar", "superadmin"],
   ];
   const tabs = allTabs.filter(([, , vis]) =>
