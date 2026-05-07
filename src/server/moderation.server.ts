@@ -23,7 +23,8 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
   const userId = msg.from?.id;
   if (!userId) return false;
 
-  const { data: settings } = await db.from("family_settings").select("*").eq("family_id", family.id).maybeSingle();
+  const { getFamilySettings, getBannedWords } = await import("./cache.server");
+  const settings = await getFamilySettings(family.id);
   if (!settings) return false;
 
   const text = (msg.text ?? msg.caption ?? "").toString();
@@ -48,8 +49,8 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
     lastMsgAt.set(key, now);
   }
   if (!violation && text) {
-    const { data: words } = await db.from("banned_words").select("*").eq("family_id", family.id);
-    for (const w of words ?? []) {
+    const words = await getBannedWords(family.id);
+    for (const w of words) {
       try {
         const re = w.is_regex ? new RegExp(w.pattern, "i") : new RegExp(escapeRegex(w.pattern), "i");
         if (re.test(text)) {

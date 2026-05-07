@@ -188,6 +188,8 @@ export const updateSettings = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { error } = await supabase.from("family_settings").update(data.patch as never).eq("family_id", data.familyId);
     if (error) throw new Error(error.message);
+    const { invalidateCache } = await import("./cache.server");
+    invalidateCache(`settings:${data.familyId}`);
     return { ok: true };
   });
 
