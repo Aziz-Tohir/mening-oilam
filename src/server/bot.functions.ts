@@ -89,6 +89,7 @@ export const clearWarnings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid(), memberId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { error } = await context.supabase.from("member_warnings").delete().eq("family_id", data.familyId).eq("member_id", data.memberId);
     if (error) throw new Error(error.message);
     return { ok: true };
