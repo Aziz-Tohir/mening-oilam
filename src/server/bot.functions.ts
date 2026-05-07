@@ -102,6 +102,7 @@ export const moderateMember = createServerFn({ method: "POST" })
     action: z.enum(["kick","ban","mute_1h","mute_24h","unban"]),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { data: family } = await context.supabase.from("families").select("telegram_group_id").eq("id", data.familyId).maybeSingle();
     const { data: member } = await context.supabase.from("family_members").select("telegram_id, full_name").eq("id", data.memberId).maybeSingle();
     if (!family?.telegram_group_id) throw new Error("Oilaning Telegram guruhi sozlanmagan");
