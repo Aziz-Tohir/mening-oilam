@@ -281,6 +281,37 @@ function ProfilePage() {
           </CardContent>
         </Card>
       )}
+
+      {m && (
+        <Card className="mt-4">
+          <CardHeader><CardTitle>🔒 Maxfiylik — Ruhiy holat tahlili</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Bot guruhdagi xabarlaringizning umumiy ohangini AI orqali kunlik baholaydi (faqat raqam saqlanadi, matn saqlanmaydi).
+              Voz kechsangiz, sizning xabarlaringiz tahlilga umuman jo'natilmaydi.
+            </p>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div>
+                <Label>Xabarlarim tahlilga qo'shilmasin</Label>
+                <p className="text-xs text-muted-foreground">O'zgartirish darhol kuchga kiradi.</p>
+              </div>
+              <Switch
+                checked={!!m.sentiment_opt_out}
+                onCheckedChange={async (v) => {
+                  try {
+                    await callServer(setSentimentOptOut, { memberId: m.id, optOut: v });
+                    toast.success(v ? "Tahlil o'chirildi" : "Tahlil yoqildi");
+                    invalidateCache("profile:");
+                    refetch();
+                  } catch (err: any) {
+                    toast.error(err?.message ?? "Saqlab bo'lmadi");
+                  }
+                }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
