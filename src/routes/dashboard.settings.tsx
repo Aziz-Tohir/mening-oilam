@@ -22,7 +22,7 @@ function SettingsPage() {
   const [familyId, setFamilyId] = useState<string>("");
   useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  const { data: setRes, ts, stale, loading, refetch: refetchSet } = useCachedServer<{ settings: any }>(
+  const { data: setRes, error: settingsError, ts, stale, loading, refetch: refetchSet } = useCachedServer<{ settings: any }>(
     `settings:${familyId}`, getSettings, { familyId }, { enabled: !!familyId },
   );
   const { data: invRes, refetch: refetchInv } = useCachedServer<{ invite_code: string | null; bot_username: string | null }>(
@@ -61,6 +61,8 @@ function SettingsPage() {
     } catch (e: any) { toast.error(e?.message ?? "Saqlab bo'lmadi"); }
   };
 
+  if (!familyId && families.length === 0) return <p className="text-muted-foreground">Oila topilmadi.</p>;
+  if (settingsError) return <p className="text-destructive">Sozlamalarni yuklab bo'lmadi: {settingsError.message}</p>;
   if (!settings) return <p className="text-muted-foreground">Yuklanmoqda…</p>;
 
   return (
