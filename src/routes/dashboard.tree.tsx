@@ -98,8 +98,8 @@ function TreePage() {
   const { data: relRes, refetch: refetchRels, ts: relTs, stale: relStale, loading: relLoading } = useCachedServer<{ relationships: any[] }>(
     `rels:${familyId}`, listRelationships, { familyId }, { enabled: !!familyId, staleMs: 1_800_000 },
   );
-  const members = memRes?.members ?? [];
-  const rels = relRes?.relationships ?? [];
+  const members = useMemo(() => memRes?.members ?? [], [memRes]);
+  const rels = useMemo(() => relRes?.relationships ?? [], [relRes]);
 
   const reload = useCallback(() => {
     invalidateCache(`members:${familyId}`);
