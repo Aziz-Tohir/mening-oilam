@@ -17,6 +17,7 @@ import { Route as DashboardUpdatesRouteImport } from './routes/dashboard.updates
 import { Route as DashboardTreeRouteImport } from './routes/dashboard.tree'
 import { Route as DashboardStatsRouteImport } from './routes/dashboard.stats'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
+import { Route as DashboardSentimentRouteImport } from './routes/dashboard.sentiment'
 import { Route as DashboardRequestsRouteImport } from './routes/dashboard.requests'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardMemoriesRouteImport } from './routes/dashboard.memories'
@@ -72,6 +73,11 @@ const DashboardStatsRoute = DashboardStatsRouteImport.update({
 const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSentimentRoute = DashboardSentimentRouteImport.update({
+  id: '/sentiment',
+  path: '/sentiment',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardRequestsRoute = DashboardRequestsRouteImport.update({
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
+  '/dashboard/sentiment': typeof DashboardSentimentRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
+  '/dashboard/sentiment': typeof DashboardSentimentRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -226,6 +234,7 @@ export interface FileRoutesById {
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/requests': typeof DashboardRequestsRoute
+  '/dashboard/sentiment': typeof DashboardSentimentRoute
   '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/stats': typeof DashboardStatsRoute
   '/dashboard/tree': typeof DashboardTreeRoute
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
     | '/dashboard/memories'
     | '/dashboard/profile'
     | '/dashboard/requests'
+    | '/dashboard/sentiment'
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/tree'
@@ -279,6 +289,7 @@ export interface FileRouteTypes {
     | '/dashboard/memories'
     | '/dashboard/profile'
     | '/dashboard/requests'
+    | '/dashboard/sentiment'
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/tree'
@@ -305,6 +316,7 @@ export interface FileRouteTypes {
     | '/dashboard/memories'
     | '/dashboard/profile'
     | '/dashboard/requests'
+    | '/dashboard/sentiment'
     | '/dashboard/settings'
     | '/dashboard/stats'
     | '/dashboard/tree'
@@ -388,6 +400,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/dashboard/settings'
       preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/sentiment': {
+      id: '/dashboard/sentiment'
+      path: '/sentiment'
+      fullPath: '/dashboard/sentiment'
+      preLoaderRoute: typeof DashboardSentimentRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/requests': {
@@ -515,6 +534,7 @@ interface DashboardRouteChildren {
   DashboardMemoriesRoute: typeof DashboardMemoriesRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardRequestsRoute: typeof DashboardRequestsRoute
+  DashboardSentimentRoute: typeof DashboardSentimentRoute
   DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardStatsRoute: typeof DashboardStatsRoute
   DashboardTreeRoute: typeof DashboardTreeRoute
@@ -532,6 +552,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardMemoriesRoute: DashboardMemoriesRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardRequestsRoute: DashboardRequestsRoute,
+  DashboardSentimentRoute: DashboardSentimentRoute,
   DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardStatsRoute: DashboardStatsRoute,
   DashboardTreeRoute: DashboardTreeRoute,
