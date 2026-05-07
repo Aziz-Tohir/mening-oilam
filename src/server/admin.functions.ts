@@ -150,7 +150,12 @@ export const addRelationship = createServerFn({ method: "POST" })
       relationship_type: data.relationshipType as any,
       created_by: userId,
     });
-    if (error) throw new Error(error.message);
+    if (error) {
+      if ((error as any).code === "23505" || /duplicate key/i.test(error.message)) {
+        throw new Error("Bu aloqa allaqachon mavjud");
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
