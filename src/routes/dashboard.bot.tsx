@@ -80,12 +80,19 @@ function BotPage() {
 
 function ModerationTab({ familyId }: { familyId: string }) {
   const [s, setS] = useState<any>(null);
-  useEffect(() => { callServer(getSettings, { familyId }).then(r => setS(r.settings)); }, [familyId]);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    setS(null); setErr(null);
+    callServer(getSettings, { familyId })
+      .then(r => setS(r.settings ?? {}))
+      .catch((e: any) => setErr(e?.message ?? "Sozlamalarni yuklab bo'lmadi"));
+  }, [familyId]);
   const save = async (patch: any) => {
     setS({ ...s, ...patch });
     try { await callServer(updateSettings, { familyId, patch }); toast.success("Saqlandi"); }
     catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
   };
+  if (err) return <p className="text-destructive text-sm">{err}</p>;
   if (!s) return <p className="text-muted-foreground">Yuklanmoqda…</p>;
   return (
     <Card>
