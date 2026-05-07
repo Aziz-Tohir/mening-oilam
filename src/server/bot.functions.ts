@@ -35,6 +35,7 @@ export const addBannedWord = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
+    const { error } = await context.supabase.from("banned_words").insert({
       family_id: data.familyId, pattern: data.pattern, is_regex: data.isRegex, action: data.action, created_by: context.userId,
     } as any);
     if (error) throw new Error(error.message);
