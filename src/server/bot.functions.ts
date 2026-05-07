@@ -163,7 +163,8 @@ export const sendBroadcast = createServerFn({ method: "POST" })
     } as any);
     let logMsg = `📣 Broadcast (${data.target}, ${data.genderFilter}): ${recipients} ✓ / ${failures} ✗`;
     if (failedTargets.length) {
-      const preview = failedTargets.slice(0, 10).map(f => `• <code>${f.telegram_id}</code> ${f.full_name ? `(${escapeHtml(f.full_name)})` : ""} — ${escapeHtml(f.error)}`).join("\n");
+      const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const preview = failedTargets.slice(0, 10).map(f => `• <code>${f.telegram_id}</code> ${f.full_name ? `(${esc(f.full_name)})` : ""} — ${esc(f.error)}`).join("\n");
       logMsg += `\n\n<b>Yetkazilmagan:</b>\n${preview}${failedTargets.length > 10 ? `\n…va yana ${failedTargets.length - 10} ta` : ""}`;
     }
     await postLog(data.familyId, "actions", logMsg);
