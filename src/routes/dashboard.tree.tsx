@@ -237,7 +237,7 @@ function TreePage() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground sm:text-sm">
-            A'zoga bosing — profil ochiladi. Ikki node'ni torting — yangi aloqa qo'shasiz.
+            <span className="font-semibold text-foreground">+ Yangi aloqa</span> tugmasini bosing yoki ikki node'ni bir-biriga torting. A'zoga bosing — profil ochiladi.
           </CardTitle>
         </CardHeader>
         <CardContent className="p-2 sm:p-4">
