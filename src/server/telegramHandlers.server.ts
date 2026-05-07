@@ -87,18 +87,11 @@ async function handleMessage(msg: TgMessage) {
 
   // Group events
   if (msg.chat.type !== "private") {
-    const { data: family } = await db
-      .from("families")
-      .select("id, telegram_group_id")
-      .eq("telegram_group_id", msg.chat.id)
-      .maybeSingle();
+    const { getFamilyByChatId, getFamilySettings, getMemberByTelegramId } = await import("./cache.server");
+    const family = await getFamilyByChatId(msg.chat.id);
 
     if (family) {
-      const { data: settings } = await db
-        .from("family_settings")
-        .select("delete_join_leave_messages, enforce_bot_onboarding, welcome_message_auto_delete_seconds, manage_foreign_bot_media")
-        .eq("family_id", family.id)
-        .maybeSingle();
+      const settings = await getFamilySettings(family.id);
 
       // Mute non-onboarded new members (joined directly without bot flow)
       if (msg.new_chat_members?.length && (settings as any)?.enforce_bot_onboarding !== false) {
