@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { getMyMemberships, updateMyProfile, importTelegramPhoto } from "@/server/profile.functions";
+import { setSentimentOptOut } from "@/server/sentiment.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
