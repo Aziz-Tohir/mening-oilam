@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { listMyFamilies } from "@/server/families.functions";
-import { listMembers, setMemberStatus, updateMember } from "@/server/admin.functions";
+import { listMembers, setMemberStatus, updateMember, addMemberManually } from "@/server/admin.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 import { relationshipLabel, RELATIONSHIP_OPTIONS } from "@/lib/relationships";
@@ -52,6 +52,7 @@ function MembersPage() {
   const { isAdmin } = useUserRole();
 
   const [editing, setEditing] = useState<Member | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const toggleBlock = async (m: Member) => {
     const next = m.status === "blocked" ? "active" : "blocked";
@@ -67,10 +68,15 @@ function MembersPage() {
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2"><h1 className="text-2xl font-bold">A'zolar</h1><CacheStatus ts={memTs} stale={memStale} loading={loading && !memRes} onRefresh={() => { invalidateCache(`members:${familyId}`); refetch(); }} /></div>
-        <Select value={familyId} onValueChange={setFamilyId}>
-          <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Oila tanlang" /></SelectTrigger>
-          <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          {isAdmin && familyId && (
+            <Button size="sm" onClick={() => setAdding(true)}>+ A'zo qo'shish</Button>
+          )}
+          <Select value={familyId} onValueChange={setFamilyId}>
+            <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Oila tanlang" /></SelectTrigger>
+            <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
       <Card className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
