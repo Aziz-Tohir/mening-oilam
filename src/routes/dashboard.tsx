@@ -19,15 +19,18 @@ function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [tgAuthing, setTgAuthing] = useState(false);
+  const [tgReady, setTgReady] = useState(typeof window !== "undefined" && !!(window as any).Telegram?.WebApp);
 
   // Lazy-load Telegram WebApp script (only on dashboard, not on landing)
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if ((window as any).Telegram?.WebApp) return;
-    if (document.querySelector('script[src="https://telegram.org/js/telegram-web-app.js"]')) return;
+    if ((window as any).Telegram?.WebApp) { setTgReady(true); return; }
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://telegram.org/js/telegram-web-app.js"]');
+    if (existing) { existing.addEventListener("load", () => setTgReady(true)); return; }
     const s = document.createElement("script");
     s.src = "https://telegram.org/js/telegram-web-app.js";
     s.async = true;
+    s.onload = () => setTgReady(true);
     document.head.appendChild(s);
   }, []);
 
