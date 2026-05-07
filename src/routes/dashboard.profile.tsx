@@ -33,6 +33,7 @@ type Membership = {
   username: string | null;
   telegram_id: number | null;
   status: string;
+  sentiment_opt_out?: boolean;
   families: { id: string; name: string } | null;
 };
 
