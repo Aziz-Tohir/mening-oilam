@@ -117,6 +117,48 @@ export const updateMember = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const addMemberManually = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    familyId: z.string().uuid(),
+    full_name: z.string().min(2).max(128),
+    telegram_id: z.coerce.number().int().positive(),
+    username: z.string().max(64).optional().nullable(),
+    gender: z.enum(["male", "female"]).optional().nullable(),
+    birth_date: z.string().optional().nullable(),
+    phone: z.string().max(32).optional().nullable(),
+    relationship_to_inviter: z.string().max(64).optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertCanManageFamily(context.userId, data.familyId);
+    const db = getAdminDb();
+    // Reject if telegram_id already in this family
+    const { data: existing } = await db.from("family_members")
+      .select("id").eq("family_id", data.familyId).eq("telegram_id", data.telegram_id).maybeSingle();
+    if (existing) throw new Error("Bu Telegram ID allaqachon oilada mavjud");
+
+    const { data: inserted, error } = await db.from("family_members").insert({
+      family_id: data.familyId,
+      telegram_id: data.telegram_id,
+      full_name: data.full_name,
+      username: data.username ?? null,
+      gender: (data.gender ?? null) as any,
+      birth_date: data.birth_date || null,
+      phone: data.phone || null,
+      relationship_to_inviter: (data.relationship_to_inviter ?? null) as any,
+      status: "active",
+      invited_by: context.userId,
+    } as any).select("id").single();
+    if (error) throw new Error(error.message);
+
+    await db.from("action_logs").insert({
+      family_id: data.familyId, actor_user_id: context.userId,
+      action: "member_added_manually",
+      details: { member_id: inserted!.id, telegram_id: data.telegram_id, full_name: data.full_name },
+    });
+    return { id: inserted!.id };
+  });
+
 export const listJoinRequests = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
