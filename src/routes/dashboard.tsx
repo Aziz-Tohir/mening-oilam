@@ -19,10 +19,24 @@ function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [tgAuthing, setTgAuthing] = useState(false);
+  const [tgReady, setTgReady] = useState(typeof window !== "undefined" && !!(window as any).Telegram?.WebApp);
+
+  // Lazy-load Telegram WebApp script (only on dashboard, not on landing)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ((window as any).Telegram?.WebApp) { setTgReady(true); return; }
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://telegram.org/js/telegram-web-app.js"]');
+    if (existing) { existing.addEventListener("load", () => setTgReady(true)); return; }
+    const s = document.createElement("script");
+    s.src = "https://telegram.org/js/telegram-web-app.js";
+    s.async = true;
+    s.onload = () => setTgReady(true);
+    document.head.appendChild(s);
+  }, []);
 
   // Telegram Mini App auto-login
   useEffect(() => {
-    if (loading || user || tgAuthing) return;
+    if (loading || user || tgAuthing || !tgReady) return;
     const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
     const initData = tg?.initData;
     if (!initData) return;
@@ -50,15 +64,15 @@ function DashboardLayout() {
         setTgAuthing(false);
       }
     })();
-  }, [loading, user, tgAuthing, navigate]);
+  }, [loading, user, tgAuthing, tgReady, navigate]);
 
   useEffect(() => {
-    if (loading || tgAuthing) return;
+    if (loading || tgAuthing || !tgReady) return;
     if (!user) {
       const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
       if (!tg?.initData) navigate({ to: "/login" });
     }
-  }, [loading, user, tgAuthing, navigate]);
+  }, [loading, user, tgAuthing, tgReady, navigate]);
 
   // Redirect non-admins away from admin-only pages
   useEffect(() => {
