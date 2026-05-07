@@ -16,7 +16,8 @@ import {
   listWarnings, addWarning, clearWarnings,
   moderateMember, sendBroadcast, listBroadcasts,
 } from "@/server/bot.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
 import { Trash2, MessageSquare, ShieldAlert, Ban, UserX, VolumeX, Megaphone, Plus } from "lucide-react";
 
@@ -25,19 +26,32 @@ export const Route = createFileRoute("/dashboard/bot")({
 });
 
 function BotPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState("");
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
-      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
-  }, []);
+  const { ts, stale, loading, refetch } = useCachedServer<{ settings: any }>(
+    `bot-settings:${familyId}`, getSettings, { familyId }, { enabled: !!familyId },
+  );
+  const reload = () => {
+    invalidateCache(`bot-settings:${familyId}`);
+    invalidateCache(`banned-words:${familyId}`);
+    invalidateCache(`warnings:${familyId}`);
+    invalidateCache(`broadcasts:${familyId}`);
+    invalidateCache(`members:${familyId}`);
+    refetch();
+    // Trigger soft refresh of children via key change
+    window.dispatchEvent(new CustomEvent("bot:reload", { detail: { familyId } }));
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Bot boshqaruvi</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold">Bot boshqaruvi</h1>
+          <CacheStatus ts={ts} stale={stale} loading={loading} onRefresh={reload} />
+        </div>
         <Select value={familyId} onValueChange={setFamilyId}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
