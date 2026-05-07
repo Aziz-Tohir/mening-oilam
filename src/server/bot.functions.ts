@@ -133,16 +133,18 @@ export const sendBroadcast = createServerFn({ method: "POST" })
     target: z.enum(["group","members"]),
     text: z.string().min(1).max(4000),
     genderFilter: z.enum(["all","male","female"]).default("all"),
+    parseMode: z.enum(["none","HTML"]).default("none"),
   }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const db = getAdminDb();
+    const sendOpts = data.parseMode === "HTML" ? { parse_mode: "HTML" as const } : undefined;
     let recipients = 0, failures = 0;
     const failedTargets: Array<{ telegram_id: number; member_id?: string; full_name?: string; error: string }> = [];
     if (data.target === "group") {
       const { data: f } = await context.supabase.from("families").select("telegram_group_id").eq("id", data.familyId).maybeSingle();
       if (!f?.telegram_group_id) throw new Error("Guruh sozlanmagan");
-      try { await sendMessage(f.telegram_group_id, data.text); recipients = 1; }
+      try { await sendMessage(f.telegram_group_id, data.text, sendOpts); recipients = 1; }
       catch (e: any) {
         failures = 1;
         failedTargets.push({ telegram_id: f.telegram_group_id, error: String(e?.message ?? e) });
@@ -159,7 +161,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
         if (!m.telegram_id) continue;
         if (!first) await sleep(50);
         first = false;
-        try { await sendMessage(m.telegram_id, data.text); recipients++; }
+        try { await sendMessage(m.telegram_id, data.text, sendOpts); recipients++; }
         catch (e: any) {
           failures++;
           const errMsg = String(e?.message ?? e);
