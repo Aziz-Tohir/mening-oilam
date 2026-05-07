@@ -1,0 +1,1 @@
+ALTER TABLE public.bot_broadcasts ADD COLUMN IF NOT EXISTS failed_targets JSONB;
