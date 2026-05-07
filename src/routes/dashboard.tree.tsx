@@ -182,19 +182,28 @@ function TreePage() {
     setPendingConn({ source: c.source, target: c.target });
   }, []);
 
-  const confirmAddRel = async () => {
-    if (!pendingConn) return;
+  const submitRel = async (source: string, target: string, type: string, onDone: () => void) => {
+    if (!source || !target || source === target) { toast.error("Ikki har xil a'zo tanlang"); return; }
     try {
       await callServer(addRelationship, {
-        familyId,
-        memberId1: pendingConn.source,
-        memberId2: pendingConn.target,
-        relationshipType: newRelType,
+        familyId, memberId1: source, memberId2: target, relationshipType: type,
       });
       toast.success("Aloqa qo'shildi");
-      setPendingConn(null);
+      onDone();
       reload();
     } catch (e: any) { toast.error(e?.message ?? "Xatolik yuz berdi"); }
+  };
+
+  const confirmAddRel = async () => {
+    if (!pendingConn) return;
+    await submitRel(pendingConn.source, pendingConn.target, newRelType, () => setPendingConn(null));
+  };
+
+  const confirmWizard = async () => {
+    await submitRel(wizFrom, wizTo, newRelType, () => {
+      setRelWizardOpen(false);
+      setWizFrom(""); setWizTo(""); setWizSearchFrom(""); setWizSearchTo("");
+    });
   };
 
   const exportPng = async () => {
