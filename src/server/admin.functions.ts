@@ -4,6 +4,19 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAdminDb } from "./db.server";
 import { postLog } from "./logChannel.server";
 
+async function assertCanManageFamily(userId: string, familyId: string) {
+  const db = getAdminDb();
+  const { data, error } = await db
+    .from("user_roles")
+    .select("id")
+    .eq("user_id", userId)
+    .or(`family_id.eq.${familyId},family_id.is.null`)
+    .in("role", ["admin", "superadmin"])
+    .limit(1);
+  if (error) throw new Error(error.message);
+  if (!data || data.length === 0) throw new Error("Bu oila sozlamalarini boshqarish huquqi yo'q");
+}
+
 export const listMembers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
@@ -173,8 +186,15 @@ export const getSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { data: row } = await supabase.from("family_settings").select("*").eq("family_id", data.familyId).maybeSingle();
+    await assertCanManageFamily(context.userId, data.familyId);
+    const db = getAdminDb();
+    const { data: row, error } = await db.from("family_settings").select("*").eq("family_id", data.familyId).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) {
+      const { data: created, error: createError } = await db.from("family_settings").insert({ family_id: data.familyId }).select("*").single();
+      if (createError) throw new Error(createError.message);
+      return { settings: created };
+    }
     return { settings: row };
   });
 
@@ -185,8 +205,9 @@ export const updateSettings = createServerFn({ method: "POST" })
     patch: z.record(z.string(), z.any()),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
-    const { error } = await supabase.from("family_settings").update(data.patch as never).eq("family_id", data.familyId);
+    await assertCanManageFamily(context.userId, data.familyId);
+    const db = getAdminDb();
+    const { error } = await db.from("family_settings").update(data.patch as never).eq("family_id", data.familyId);
     if (error) throw new Error(error.message);
     const { invalidateCache } = await import("./cache.server");
     invalidateCache(`settings:${data.familyId}`);
