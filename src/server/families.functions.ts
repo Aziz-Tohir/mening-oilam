@@ -7,12 +7,28 @@ import { getAdminDb } from "./db.server";
 export const listMyFamilies = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data: owned } = await supabase.from("families").select("id, name, telegram_group_id, telegram_group_title, owner_user_id, created_at").eq("owner_user_id", userId);
-    const { data: roles } = await supabase.from("user_roles").select("family_id, role").eq("user_id", userId);
+    const { userId } = context;
+    const admin = getAdminDb();
+    // Check global superadmin (family_id IS NULL row hidden by RLS, use admin)
+    const { data: superRows } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "superadmin")
+      .is("family_id", null)
+      .limit(1);
+    if (superRows && superRows.length > 0) {
+      const { data: all } = await admin
+        .from("families")
+        .select("id, name, telegram_group_id, telegram_group_title, owner_user_id, created_at")
+        .order("created_at", { ascending: false });
+      return { families: all ?? [] };
+    }
+    const { data: owned } = await admin.from("families").select("id, name, telegram_group_id, telegram_group_title, owner_user_id, created_at").eq("owner_user_id", userId);
+    const { data: roles } = await admin.from("user_roles").select("family_id, role").eq("user_id", userId);
     const familyIds = Array.from(new Set([...(owned ?? []).map(f => f.id), ...(roles ?? []).map(r => r.family_id).filter((x): x is string => !!x)]));
     if (familyIds.length === 0) return { families: [] };
-    const { data: all } = await supabase.from("families").select("id, name, telegram_group_id, telegram_group_title, owner_user_id, created_at").in("id", familyIds);
+    const { data: all } = await admin.from("families").select("id, name, telegram_group_id, telegram_group_title, owner_user_id, created_at").in("id", familyIds);
     return { families: all ?? [] };
   });
 
