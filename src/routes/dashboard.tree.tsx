@@ -337,6 +337,87 @@ function TreePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={relWizardOpen} onOpenChange={(o) => { if (!o) { setRelWizardOpen(false); setWizFrom(""); setWizTo(""); } else setRelWizardOpen(true); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Yangi aloqa qo'shish</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const activeMembers = members.filter((m: any) => m.status === "active");
+            const PersonPicker = ({ label, value, setValue, search, setSearch, exclude }: any) => {
+              const sel = members.find((m: any) => m.id === value);
+              const list = activeMembers
+                .filter((m: any) => m.id !== exclude)
+                .filter((m: any) => !search || (m.full_name ?? "").toLowerCase().includes(search.toLowerCase()))
+                .slice(0, 50);
+              return (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">{label}</Label>
+                  {sel ? (
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 p-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {sel.photo_url ? (
+                          <img src={sel.photo_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                            {(sel.full_name ?? "?").split(" ").map((s: string) => s[0]).slice(0,2).join("")}
+                          </div>
+                        )}
+                        <span className="truncate text-sm font-medium">{sel.full_name}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setValue("")}>O'zgartirish</Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input placeholder="Ism bo'yicha qidirish…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                      <div className="max-h-48 overflow-y-auto rounded-md border border-border divide-y divide-border">
+                        {list.length === 0 && <div className="p-3 text-center text-xs text-muted-foreground">Topilmadi</div>}
+                        {list.map((m: any) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => { setValue(m.id); setSearch(""); }}
+                            className="flex w-full items-center gap-2 p-2 text-left text-sm hover:bg-muted transition"
+                          >
+                            {m.photo_url ? (
+                              <img src={m.photo_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+                            ) : (
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+                                {(m.full_name ?? "?").split(" ").map((s: string) => s[0]).slice(0,2).join("")}
+                              </div>
+                            )}
+                            <span className="truncate">{m.full_name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            };
+            return (
+              <div className="space-y-4">
+                <PersonPicker label="1-shaxs (kim?)" value={wizFrom} setValue={setWizFrom} search={wizSearchFrom} setSearch={setWizSearchFrom} exclude={wizTo} />
+                <PersonPicker label="2-shaxs (kimga?)" value={wizTo} setValue={setWizTo} search={wizSearchTo} setSearch={setWizSearchTo} exclude={wizFrom} />
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Aloqa turi</Label>
+                  <Select value={newRelType} onValueChange={setNewRelType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {REL_TYPES.map((t) => <SelectItem key={t} value={t}>{REL_LABELS[t] ?? t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setRelWizardOpen(false); setWizFrom(""); setWizTo(""); }}>Bekor qilish</Button>
+            <Button onClick={confirmWizard} disabled={!wizFrom || !wizTo}>Qo'shish</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
