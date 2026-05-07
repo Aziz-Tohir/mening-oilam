@@ -108,7 +108,7 @@ export function useCachedServer<T>(
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void refetch(false); }, [key, enabled]);
+  useEffect(() => { refetch(false).catch(() => {}); }, [key, enabled]);
 
   return { data, loading, error, ts, stale, refetch: () => refetch(true) };
 }
