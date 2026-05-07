@@ -46,6 +46,7 @@ export const deleteBannedWord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ familyId: z.string().uuid(), id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { error } = await context.supabase.from("banned_words").delete().eq("id", data.id).eq("family_id", data.familyId);
     if (error) throw new Error(error.message);
     return { ok: true };
