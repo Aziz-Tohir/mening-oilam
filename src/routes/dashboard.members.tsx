@@ -465,3 +465,86 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
     </Dialog>
   );
 }
+
+function AddMemberDialog({ familyId, onClose, onSaved }: { familyId: string; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    full_name: "", telegram_id: "", username: "",
+    gender: "" as "" | "male" | "female",
+    birth_date: "", phone: "", relationship_to_inviter: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.full_name.trim() || !form.telegram_id.trim()) {
+      toast.error("Ism va Telegram ID majburiy");
+      return;
+    }
+    setSaving(true);
+    try {
+      await callServer(addMemberManually, {
+        familyId,
+        full_name: form.full_name.trim(),
+        telegram_id: Number(form.telegram_id.trim()),
+        username: form.username.trim() || null,
+        gender: (form.gender || null) as any,
+        birth_date: form.birth_date || null,
+        phone: form.phone.trim() || null,
+        relationship_to_inviter: form.relationship_to_inviter || null,
+      });
+      toast.success("A'zo qo'shildi");
+      onSaved();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Qo'shib bo'lmadi");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle>Yangi a'zo qo'shish</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <Label>To'liq ism *</Label>
+            <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+          </div>
+          <div>
+            <Label>Telegram ID *</Label>
+            <Input required type="number" value={form.telegram_id} onChange={(e) => setForm({ ...form, telegram_id: e.target.value })} placeholder="123456789" />
+            <p className="mt-1 text-xs text-muted-foreground">@userinfobot orqali oling</p>
+          </div>
+          <div>
+            <Label>Username (ixtiyoriy)</Label>
+            <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="username (without @)" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Tug'ilgan kun</Label>
+              <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+            </div>
+            <div>
+              <Label>Jins</Label>
+              <Select value={form.gender || undefined} onValueChange={(v) => setForm({ ...form, gender: v as any })}>
+                <SelectTrigger><SelectValue placeholder="Tanlanmagan" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Erkak</SelectItem>
+                  <SelectItem value="female">Ayol</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Telefon</Label>
+            <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998…" />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>Bekor qilish</Button>
+            <Button type="submit" disabled={saving}>{saving ? "Qo'shilmoqda…" : "Qo'shish"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
