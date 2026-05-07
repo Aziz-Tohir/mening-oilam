@@ -104,49 +104,87 @@ export const Route = createFileRoute("/api/public/telegram/miniapp-auth")({
           }, { status: 403 });
         }
 
-        const email = `tg${telegramId}@telegram.local`;
         let userId = member.user_id as string | null;
+        let userEmail: string | null = null;
 
-        // Find or create auth user
+        // 1) If member already linked to an auth user, reuse THAT user's email.
+        if (userId) {
+          try {
+            const { data: u } = await db.auth.admin.getUserById(userId);
+            userEmail = u?.user?.email ?? null;
+          } catch {}
+        }
+
+        // 2) Otherwise, look for an existing profile/auth user by telegram_id.
         if (!userId) {
           const { data: existing } = await db
             .from("profiles")
-            .select("user_id")
+            .select("user_id, email")
             .eq("telegram_id", telegramId)
             .maybeSingle();
-          userId = existing?.user_id ?? null;
+          if (existing?.user_id) {
+            userId = existing.user_id;
+            userEmail = (existing as any).email ?? null;
+            if (!userEmail) {
+              try {
+                const { data: u } = await db.auth.admin.getUserById(userId);
+                userEmail = u?.user?.email ?? null;
+              } catch {}
+            }
+          }
         }
 
+        // 3) Create a new auth user with synthetic telegram email.
         if (!userId) {
-          const { data: created, error: createErr } = await db.auth.admin.createUser({
-            email,
-            email_confirm: true,
-            user_metadata: {
-              telegram_id: telegramId,
-              telegram_username: tgUser.username,
-              full_name: member.full_name,
-            },
-          });
-          if (createErr || !created.user) {
-            return Response.json({ error: "Failed to create user", details: createErr?.message }, { status: 500 });
+          const synthEmail = `tg${telegramId}@telegram.local`;
+          // Maybe an auth user with this email already exists (orphan profile)
+          try {
+            const { data: list } = await db.auth.admin.listUsers();
+            const found = list?.users?.find((u: any) => u.email === synthEmail);
+            if (found) {
+              userId = found.id;
+              userEmail = found.email ?? synthEmail;
+            }
+          } catch {}
+
+          if (!userId) {
+            const { data: created, error: createErr } = await db.auth.admin.createUser({
+              email: synthEmail,
+              email_confirm: true,
+              user_metadata: {
+                telegram_id: telegramId,
+                telegram_username: tgUser.username,
+                full_name: member.full_name,
+              },
+            });
+            if (createErr || !created.user) {
+              return Response.json({ error: "Failed to create user", details: createErr?.message }, { status: 500 });
+            }
+            userId = created.user.id;
+            userEmail = synthEmail;
           }
-          userId = created.user.id;
+
           await db.from("profiles").upsert({
             user_id: userId,
-            email,
+            email: userEmail,
             display_name: member.full_name,
             telegram_id: telegramId,
             telegram_username: tgUser.username ?? null,
           }, { onConflict: "user_id" });
         }
 
-        // Link member to user
+        // Ensure profile has telegram_id linked
+        await db.from("profiles").update({
+          telegram_id: telegramId,
+          telegram_username: tgUser.username ?? null,
+        }).eq("user_id", userId);
+
+        // Link member to user (idempotent)
         if (member.user_id !== userId) {
           await db.from("family_members").update({ user_id: userId }).eq("id", member.id);
         }
 
-        // Ensure a 'member' role exists for this user in the family (idempotent).
-        // Admins are assigned manually — this never overwrites an existing higher role.
+        // Ensure a 'member' role exists in the family (never downgrade existing roles)
         const { data: existingRole } = await db
           .from("user_roles")
           .select("id")
@@ -161,10 +199,14 @@ export const Route = createFileRoute("/api/public/telegram/miniapp-auth")({
           });
         }
 
+        if (!userEmail) {
+          return Response.json({ error: "No email for user" }, { status: 500 });
+        }
+
         // Generate a magiclink the client can verify to get a session
         const { data: link, error: linkErr } = await db.auth.admin.generateLink({
           type: "magiclink",
-          email,
+          email: userEmail,
         });
         if (linkErr || !link?.properties?.hashed_token) {
           return Response.json({ error: "Failed to issue session", details: linkErr?.message }, { status: 500 });
@@ -173,7 +215,7 @@ export const Route = createFileRoute("/api/public/telegram/miniapp-auth")({
         return Response.json({
           ok: true,
           token_hash: link.properties.hashed_token,
-          email,
+          email: userEmail,
         });
       },
     },
