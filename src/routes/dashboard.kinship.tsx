@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMembers } from "@/server/admin.functions";
 import { computeKinship } from "@/server/kinship.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/kinship")({
@@ -15,26 +16,23 @@ export const Route = createFileRoute("/dashboard/kinship")({
 });
 
 function KinshipPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState("");
-  const [members, setMembers] = useState<any[]>([]);
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
+
+  const { data: memRes, ts, stale, loading: memLoading, refetch } = useCachedServer<{ members: any[] }>(
+    `members:${familyId}`, listMembers, { familyId }, { enabled: !!familyId },
+  );
+  const members = useMemo(() => (memRes?.members ?? []).filter((m: any) => m.status === "active"), [memRes]);
+  const reload = () => { invalidateCache(`members:${familyId}`); refetch(); };
+
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
-      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
-  }, []);
-
-  useEffect(() => {
-    setResult(null); setFrom(""); setTo("");
-    if (familyId) callServer(listMembers, { familyId })
-      .then(r => setMembers(r.members.filter((m: any) => m.status === "active")))
-      .catch((e: any) => toast.error(e?.message ?? "A'zolarni yuklab bo'lmadi"));
-  }, [familyId]);
+  useEffect(() => { setResult(null); setFrom(""); setTo(""); }, [familyId]);
 
   const memberById = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members]);
 
@@ -51,7 +49,10 @@ function KinshipPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Kim kimga kim?</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold">Kim kimga kim?</h1>
+          <CacheStatus ts={ts} stale={stale} loading={memLoading && !memRes} onRefresh={reload} />
+        </div>
         <Select value={familyId} onValueChange={setFamilyId}>
           <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Oila" /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
