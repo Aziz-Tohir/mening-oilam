@@ -11,10 +11,11 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 const ADMIN_ONLY_PATHS = ["/dashboard/members", "/dashboard/requests", "/dashboard/bot", "/dashboard/settings", "/dashboard/updates"];
+const SUPERADMIN_ONLY_PATHS = ["/dashboard/families"];
 
 function DashboardLayout() {
   const { user, loading, signOut } = useAuth();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isSuperadmin, loading: roleLoading } = useUserRole();
   const navigate = useNavigate();
   const location = useLocation();
   const [tgAuthing, setTgAuthing] = useState(false);
@@ -61,30 +62,39 @@ function DashboardLayout() {
 
   // Redirect non-admins away from admin-only pages
   useEffect(() => {
-    if (!user || roleLoading || isAdmin) return;
-    if (ADMIN_ONLY_PATHS.some(p => location.pathname.startsWith(p))) {
+    if (!user || roleLoading) return;
+    if (!isSuperadmin && SUPERADMIN_ONLY_PATHS.some(p => location.pathname.startsWith(p))) {
+      toast.error("Bu sahifa faqat superadmin uchun");
+      navigate({ to: "/dashboard/tree" });
+      return;
+    }
+    if (!isAdmin && ADMIN_ONLY_PATHS.some(p => location.pathname.startsWith(p))) {
       toast.error("Bu sahifa faqat adminlar uchun");
       navigate({ to: "/dashboard/tree" });
     }
-  }, [user, roleLoading, isAdmin, location.pathname, navigate]);
+  }, [user, roleLoading, isAdmin, isSuperadmin, location.pathname, navigate]);
 
   if (loading || tgAuthing || !user) return <div className="p-8 text-muted-foreground">Yuklanmoqda…</div>;
 
-  const allTabs: Array<[string, string, boolean]> = [
-    ["/dashboard", "Bosh sahifa", false],
-    ["/dashboard/members", "A'zolar", true],
-    ["/dashboard/requests", "So'rovlar", true],
-    ["/dashboard/events", "Tadbirlar", false],
-    ["/dashboard/tree", "Daraxt", false],
-    ["/dashboard/stats", "Statistika", false],
-    ["/dashboard/memories", "Xotiralar", false],
-    ["/dashboard/kinship", "Kim kimga?", false],
-    ["/dashboard/profile", "Profil", false],
-    ["/dashboard/bot", "Bot", true],
-    ["/dashboard/settings", "Sozlamalar", true],
-    ["/dashboard/updates", "Updates", true],
+  type TabVis = "all" | "admin" | "superadmin";
+  const allTabs: Array<[string, string, TabVis]> = [
+    ["/dashboard", "Bosh sahifa", "all"],
+    ["/dashboard/members", "A'zolar", "admin"],
+    ["/dashboard/requests", "So'rovlar", "admin"],
+    ["/dashboard/events", "Tadbirlar", "all"],
+    ["/dashboard/tree", "Daraxt", "all"],
+    ["/dashboard/stats", "Statistika", "all"],
+    ["/dashboard/memories", "Xotiralar", "all"],
+    ["/dashboard/kinship", "Kim kimga?", "all"],
+    ["/dashboard/profile", "Profil", "all"],
+    ["/dashboard/bot", "Bot", "admin"],
+    ["/dashboard/settings", "Sozlamalar", "admin"],
+    ["/dashboard/updates", "Updates", "admin"],
+    ["/dashboard/families", "Oilalar", "superadmin"],
   ];
-  const tabs = allTabs.filter(([, , adminOnly]) => isAdmin || !adminOnly);
+  const tabs = allTabs.filter(([, , vis]) =>
+    vis === "all" || (vis === "admin" && isAdmin) || (vis === "superadmin" && isSuperadmin),
+  );
 
   return (
     <div className="min-h-screen bg-muted/20">

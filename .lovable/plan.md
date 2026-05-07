@@ -1,54 +1,45 @@
-## Muammo
+## Maqsad
 
-Web orqali oila yaratganda, foydalanuvchi `families.owner_user_id` va `user_roles`da **superadmin** bo'ladi. Lekin:
-- `profiles.telegram_id` bo'sh bo'lishi mumkin (web login Telegram ID'siz)
-- `family_members.telegram_id` esa shunchaki form'da kiritilgan raqam (egasining haqiqiy Telegram ID'si bilan mos kelmasligi mumkin)
+Faqat **superadmin** barcha oilalarni to'liq boshqara olsin. Hozircha minimal — keyinroq kengaytiramiz.
 
-Natijada:
-- **Bot /start** → `family_members WHERE telegram_id = userId` topilmaydi → "yangi user" oqimi ko'rsatiladi (a'zosiz)
-- **Mini App** → `miniapp-auth.ts:51-62` xuddi shu tekshiruv → **403 not_registered** → "Avval botda /start bosib oilaga qo'shilishingiz kerak"
+## Kim qila oladi
 
-DB tasdiqladi: `Usmonovlar` oilasi, owner `Tohirjon Odilov` (tg=1633746526), lekin `profiles.telegram_id = NULL` → bog'lanish uzilgan.
+`user_roles.role = 'superadmin'` bo'lgan har qanday foydalanuvchi (tizimda allaqachon mavjud rol — hech qanday yangi enum/migratsiya kerak emas).
 
-## A) `src/server/telegramHandlers.server.ts` — `sendStartFlow` (≈396)
+Server tomonida har bir funksiyada tekshiruv:
+```ts
+const { data } = await supabase.from("user_roles")
+  .select("role").eq("user_id", userId).eq("role", "superadmin").limit(1);
+if (!data?.length) throw new Error("Faqat superadmin uchun");
+```
 
-`family_members.telegram_id` bo'yicha topilmasa, qo'shimcha tekshiruv:
-1. `profiles WHERE telegram_id = userId` → `profileUserId` olinadi
-2. Agar profil mavjud bo'lsa: `families.owner_user_id = profileUserId` va `user_roles.user_id = profileUserId` orqali oilalarni topiladi
-3. Topilganlar uchun `family_members` qatori yo'q bo'lsa — yaratiladi (`status:'active'`); bor bo'lsa-yu `telegram_id` boshqa — `telegram_id`ni haqiqiysiga yangilanadi (auto-link)
-4. Birlashtirilgan ro'yxat bo'sh emas bo'lsa — `already_member` xabari
+## Backend — `src/server/superadmin.functions.ts` (yangi)
 
-## B) `src/routes/api/public/telegram/miniapp-auth.ts` — same logic
+4 ta server function, hammasi `getAdminDb()` (service role) ishlatadi RLS aylanib o'tish uchun:
 
-`family_members WHERE telegram_id` topilmasa:
-1. `profiles WHERE telegram_id` → `userId` olinadi
-2. Agar `userId` topilsa: `families.owner_user_id = userId` yoki `user_roles WHERE user_id` topilsa — eng birinchi oilani olib `family_members` qatorini auto-link/insert qilish (`status:'active'`)
-3. Shundan keyin standart `member` topilgan rejimga o'tib magiclink beriladi
-4. Hech qanday bog'lanish topilmagandagina `403 not_registered` qaytariladi
+1. **`listAllFamilies()`** — barcha oilalar: `id, name, owner_user_id, telegram_group_title, created_at` + a'zolar soni
+2. **`updateFamily({ familyId, patch })`** — `name`, `telegram_group_id`, `telegram_group_title`
+3. **`deleteFamily({ familyId })`** — oilani o'chirish (bog'liq jadvallar `family_id` bo'yicha kaskadli o'chiriladi: `relationships`, `family_members`, `family_settings`, `events`, `event_rsvps`, `memories`, `nominations`, `user_roles`, `join_requests`, `bot_integrations`, `messages_stats`, `member_warnings`, `banned_words`, `birthday_greetings`, `bot_broadcasts`, `notification_log`, `admin_notifications`, `action_logs`)
+4. **`transferFamilyOwnership({ familyId, newOwnerUserId })`** — `families.owner_user_id` ni yangilash + yangi egaga `superadmin` roli berish (agar yo'q bo'lsa)
 
-## C) `src/server/families.functions.ts` — `createFamily`
+Har biri `action_logs`ga yozadi.
 
-`telegram_id` berilgan bo'lsa, `profiles.telegram_id` ni `userId` uchun **upsert** qilamiz (agar bo'sh bo'lsa) — kelajakda bu muammo qaytarilmasligi uchun.
+## UI — `src/routes/dashboard.families.tsx` (yangi)
 
-## D) Backfill (mavjud Tohirjon uchun)
+Faqat superadmin sahifasi. Boshqalar kirsa — `/dashboard/tree`ga redirect.
 
-`profiles.telegram_id = 1633746526` ni `user_id = 7c645925-...` uchun yangilash. Bu **bir martalik data update** (`supabase--insert` orqali).
+Sahifada:
+- Oilalar jadvali: nom, egasi, a'zolar soni, sana
+- Har qatorda: **Tahrirlash** (modal: nom, telegram guruh) | **Egasini o'zgartirish** (modal: user_id input) | **O'chirish** (tasdiq dialog: oila nomini qayta yozish)
+
+## Navigatsiya — `src/routes/dashboard.tsx`
+
+- `useUserRole`ga `isSuperadmin` qo'shish
+- `allTabs`ga `["/dashboard/families", "Oilalar", superadminOnly]` qo'shish
+- `ADMIN_ONLY_PATHS` o'rniga `/dashboard/families`ni alohida `SUPERADMIN_ONLY_PATHS` ro'yxatiga qo'yish
 
 ## Tegilmaydi
 
-- RLS / migratsiya
-- Mini App UI / flow
-- Login forma
-
-## Texnik tafsilot
-
-```text
-/start  → family_members.tg_id?  → not found
-        → profiles.tg_id → user_id
-        → families.owner_user_id OR user_roles
-        → auto-create / auto-relink family_members row
-        → already_member
-
-miniapp-auth → bir xil mantiq, +magiclink
-createFamily → profiles.telegram_id upsert (idempotent)
-```
+- RLS policylar / DB migratsiya
+- Oila admini uchun yangi UI (keyinroq)
+- Rol/admin boshqaruvi sozlamalar sahifasida

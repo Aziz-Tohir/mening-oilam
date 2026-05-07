@@ -22,6 +22,7 @@ import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile
 import { Route as DashboardMemoriesRouteImport } from './routes/dashboard.memories'
 import { Route as DashboardMembersRouteImport } from './routes/dashboard.members'
 import { Route as DashboardKinshipRouteImport } from './routes/dashboard.kinship'
+import { Route as DashboardFamiliesRouteImport } from './routes/dashboard.families'
 import { Route as DashboardEventsRouteImport } from './routes/dashboard.events'
 import { Route as DashboardBotRouteImport } from './routes/dashboard.bot'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
@@ -96,6 +97,11 @@ const DashboardKinshipRoute = DashboardKinshipRouteImport.update({
   path: '/kinship',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardFamiliesRoute = DashboardFamiliesRouteImport.update({
+  id: '/families',
+  path: '/families',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardEventsRoute = DashboardEventsRouteImport.update({
   id: '/events',
   path: '/events',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/dashboard/bot': typeof DashboardBotRoute
   '/dashboard/events': typeof DashboardEventsRoute
+  '/dashboard/families': typeof DashboardFamiliesRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/memories': typeof DashboardMemoriesRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/dashboard/bot': typeof DashboardBotRoute
   '/dashboard/events': typeof DashboardEventsRoute
+  '/dashboard/families': typeof DashboardFamiliesRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/memories': typeof DashboardMemoriesRoute
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/dashboard/bot': typeof DashboardBotRoute
   '/dashboard/events': typeof DashboardEventsRoute
+  '/dashboard/families': typeof DashboardFamiliesRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/memories': typeof DashboardMemoriesRoute
@@ -219,6 +228,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard/bot'
     | '/dashboard/events'
+    | '/dashboard/families'
     | '/dashboard/kinship'
     | '/dashboard/members'
     | '/dashboard/memories'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard/bot'
     | '/dashboard/events'
+    | '/dashboard/families'
     | '/dashboard/kinship'
     | '/dashboard/members'
     | '/dashboard/memories'
@@ -264,6 +275,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/dashboard/bot'
     | '/dashboard/events'
+    | '/dashboard/families'
     | '/dashboard/kinship'
     | '/dashboard/members'
     | '/dashboard/memories'
@@ -387,6 +399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardKinshipRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/families': {
+      id: '/dashboard/families'
+      path: '/families'
+      fullPath: '/dashboard/families'
+      preLoaderRoute: typeof DashboardFamiliesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/events': {
       id: '/dashboard/events'
       path: '/events'
@@ -449,6 +468,7 @@ declare module '@tanstack/react-router' {
 interface DashboardRouteChildren {
   DashboardBotRoute: typeof DashboardBotRoute
   DashboardEventsRoute: typeof DashboardEventsRoute
+  DashboardFamiliesRoute: typeof DashboardFamiliesRoute
   DashboardKinshipRoute: typeof DashboardKinshipRoute
   DashboardMembersRoute: typeof DashboardMembersRoute
   DashboardMemoriesRoute: typeof DashboardMemoriesRoute
@@ -464,6 +484,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardBotRoute: DashboardBotRoute,
   DashboardEventsRoute: DashboardEventsRoute,
+  DashboardFamiliesRoute: DashboardFamiliesRoute,
   DashboardKinshipRoute: DashboardKinshipRoute,
   DashboardMembersRoute: DashboardMembersRoute,
   DashboardMemoriesRoute: DashboardMemoriesRoute,
