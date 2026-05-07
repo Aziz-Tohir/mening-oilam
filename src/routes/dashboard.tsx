@@ -36,7 +36,7 @@ function DashboardLayout() {
 
   // Telegram Mini App auto-login
   useEffect(() => {
-    if (loading || user || tgAuthing) return;
+    if (loading || user || tgAuthing || !tgReady) return;
     const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
     const initData = tg?.initData;
     if (!initData) return;
@@ -64,15 +64,15 @@ function DashboardLayout() {
         setTgAuthing(false);
       }
     })();
-  }, [loading, user, tgAuthing, navigate]);
+  }, [loading, user, tgAuthing, tgReady, navigate]);
 
   useEffect(() => {
-    if (loading || tgAuthing) return;
+    if (loading || tgAuthing || !tgReady) return;
     if (!user) {
       const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
       if (!tg?.initData) navigate({ to: "/login" });
     }
-  }, [loading, user, tgAuthing, navigate]);
+  }, [loading, user, tgAuthing, tgReady, navigate]);
 
   // Redirect non-admins away from admin-only pages
   useEffect(() => {
