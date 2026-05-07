@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { callServer } from "@/lib/serverCall";
+import { getMyRole } from "@/server/role.functions";
 
 export type AppRole = "superadmin" | "admin" | "moderator" | "member";
 
@@ -18,21 +19,19 @@ export function useUserRole() {
     }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role, family_id")
-        .eq("user_id", user.id)
-        .order("role", { ascending: true });
-      if (cancelled) return;
-      const rows = (data ?? []) as { role: AppRole; family_id: string }[];
-      // Pick the highest role across families (superadmin > admin > moderator > member).
-      const order: AppRole[] = ["superadmin", "admin", "moderator", "member"];
-      const best = rows.sort(
-        (a, b) => order.indexOf(a.role) - order.indexOf(b.role),
-      )[0];
-      setRole(best?.role ?? "member");
-      setFamilyId(best?.family_id ?? null);
-      setLoading(false);
+      try {
+        const res = await callServer(getMyRole);
+        if (cancelled) return;
+        setRole((res?.role as AppRole) ?? "member");
+        setFamilyId(res?.familyId ?? null);
+      } catch {
+        if (!cancelled) {
+          setRole("member");
+          setFamilyId(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [user, authLoading]);
