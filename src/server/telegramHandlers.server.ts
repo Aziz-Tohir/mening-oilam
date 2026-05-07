@@ -70,14 +70,63 @@ async function handleMyChatMember(evt: any) {
   const chat = evt.chat;
   const newStatus = evt.new_chat_member?.status;
   if (!chat || chat.type === "private") return;
-  if (["administrator", "member"].includes(newStatus)) {
-    const db = getAdminDb();
-    // Optionally upsert a "pending" family entry — don't auto-create; let the owner do it from admin panel.
-    await db.from("action_logs").insert({
-      family_id: null,
-      action: "bot_added_to_group",
-      details: { chat_id: chat.id, title: chat.title, status: newStatus },
-    });
+  if (!["administrator", "member"].includes(newStatus)) return;
+
+  const db = getAdminDb();
+  const adderTgId: number | undefined = evt.from?.id;
+
+  // Try to auto-link the group to a family using the adder's pending_link session
+  let linkedFamilyId: string | null = null;
+  if (adderTgId) {
+    const { data: sess } = await db
+      .from("bot_sessions")
+      .select("step, data, updated_at")
+      .eq("telegram_id", adderTgId)
+      .maybeSingle();
+    const pendingFamilyId = (sess?.data as any)?.pending_link_family_id as string | undefined;
+    const updatedAt = sess?.updated_at ? new Date(sess.updated_at as any).getTime() : 0;
+    const fresh = updatedAt > 0 && Date.now() - updatedAt < 60 * 60 * 1000; // 1h TTL
+    if (pendingFamilyId && fresh) {
+      const { data: fam } = await db
+        .from("families")
+        .select("id, name, telegram_group_id")
+        .eq("id", pendingFamilyId)
+        .maybeSingle();
+      if (fam && !fam.telegram_group_id) {
+        const { error: upErr } = await db
+          .from("families")
+          .update({ telegram_group_id: chat.id, telegram_group_title: chat.title ?? null } as any)
+          .eq("id", fam.id);
+        if (!upErr) {
+          linkedFamilyId = fam.id;
+          await db.from("family_settings").upsert({
+            family_id: fam.id,
+            log_telegram_chat_id: null,
+          } as any, { onConflict: "family_id" });
+          await db.from("bot_sessions").delete().eq("telegram_id", adderTgId);
+          try {
+            await sendMessage(adderTgId, `✅ <b>${chat.title ?? "Guruh"}</b> guruhi <b>${fam.name}</b> oilasiga ulandi.\n\n⚠️ Iltimos, botni guruhda <b>admin</b> qiling — moderatsiya uchun zarur.`, { parse_mode: "HTML" });
+          } catch {}
+          try {
+            await sendMessage(chat.id, `✅ Bu guruh <b>${fam.name}</b> oilasiga ulandi.\n\n⚠️ Iltimos meni <b>admin</b> qiling.`, { parse_mode: "HTML" });
+          } catch {}
+        }
+      }
+    }
+  }
+
+  await db.from("action_logs").insert({
+    family_id: linkedFamilyId,
+    action: linkedFamilyId ? "group_auto_linked" : "bot_added_to_group",
+    actor_telegram_id: adderTgId ?? null,
+    details: { chat_id: chat.id, title: chat.title, status: newStatus },
+  });
+
+  // If not linked, prompt the adder how to link manually
+  if (!linkedFamilyId) {
+    try {
+      await sendMessage(chat.id, `👋 Salom! Bu guruh hali biron oilaga bog'lanmagan.\n\nOila adminisi guruhda quyidagi buyruqni yuborsin:\n<code>/link &lt;TAKLIF_KODI&gt;</code>\n\n(Taklif kodini bot bilan privat suhbatda <code>/yangi_oila</code> orqali olish mumkin.)`, { parse_mode: "HTML" });
+    } catch {}
   }
 }
 
