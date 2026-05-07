@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,8 +32,10 @@ type FamilyRow = {
 };
 
 function FamiliesAdminPage() {
+  const { isSuperadmin, loading: roleLoading } = useUserRole();
+  if (!roleLoading && !isSuperadmin) return <Navigate to="/dashboard" />;
   const { data, ts, stale, loading, refetch } = useCachedServer<{ families: FamilyRow[] }>(
-    "superadmin:families", listAllFamilies,
+    "superadmin:families", listAllFamilies, undefined, { enabled: isSuperadmin },
   );
   const families = data?.families ?? [];
   const reload = () => { invalidateCache("superadmin:families"); refetch(); };
