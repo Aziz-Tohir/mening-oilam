@@ -125,6 +125,38 @@ function DashboardLayout() {
     }
   }, [user, roleLoading, isAdmin, isSuperadmin, location.pathname, navigate]);
 
+  if (tgError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/20">
+        <div className="w-full max-w-md rounded-lg border border-border bg-background p-6 space-y-4">
+          <h2 className="text-lg font-semibold">
+            {tgError.kind === "pending" ? "⏳ Tasdiq kutilmoqda" : "🔐 Oilaga qo'shilish"}
+          </h2>
+          <p className="text-sm text-muted-foreground">{tgError.message}</p>
+          {tgError.kind === "not_registered" && (
+            <form onSubmit={submitInvite} className="space-y-2">
+              <label className="text-sm font-medium">Taklif kodi (8 belgi)</label>
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                maxLength={8}
+                placeholder="ABCD1234"
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm uppercase tracking-widest"
+              />
+              <p className="text-xs text-muted-foreground">Adminingizdan yoki guruhda <code>/invite</code> orqali oling.</p>
+              <Button type="submit" className="w-full" disabled={inviting || inviteCode.trim().length < 4}>
+                {inviting ? "Yuborilmoqda…" : "So'rov yuborish"}
+              </Button>
+            </form>
+          )}
+          <Button variant="outline" className="w-full" onClick={() => { setTgError(null); window.location.reload(); }}>
+            Qayta urinish
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading || tgAuthing || !user) return <div className="p-8 text-muted-foreground">Yuklanmoqda…</div>;
 
   type TabVis = "all" | "admin" | "superadmin";
