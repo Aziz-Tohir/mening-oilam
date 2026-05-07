@@ -71,6 +71,7 @@ export const addWarning = createServerFn({ method: "POST" })
     familyId: z.string().uuid(), memberId: z.string().uuid(), reason: z.string().min(1).max(500),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const { data: m } = await context.supabase.from("family_members").select("telegram_id, full_name").eq("id", data.memberId).maybeSingle();
     const { error } = await context.supabase.from("member_warnings").insert({
       family_id: data.familyId, member_id: data.memberId, telegram_id: m?.telegram_id,
