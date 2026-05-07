@@ -113,6 +113,10 @@ function TreePage() {
   const [selected, setSelected] = useState<any | null>(null);
   const [pendingConn, setPendingConn] = useState<{ source: string; target: string } | null>(null);
   const [relWizardOpen, setRelWizardOpen] = useState(false);
+  const [wizFrom, setWizFrom] = useState<string>("");
+  const [wizTo, setWizTo] = useState<string>("");
+  const [wizSearchFrom, setWizSearchFrom] = useState("");
+  const [wizSearchTo, setWizSearchTo] = useState("");
   const [newRelType, setNewRelType] = useState("father");
   const flowWrap = useRef<HTMLDivElement>(null);
   const exportJson = async () => {
