@@ -87,7 +87,7 @@ async function handleMessage(msg: TgMessage) {
 
   // Group events
   if (msg.chat.type !== "private") {
-    const { getFamilyByChatId, getFamilySettings, getMemberByTelegramId } = await import("./cache.server");
+    const { getFamilyByChatId, getFamilySettings } = await import("./cache.server");
     const family = await getFamilyByChatId(msg.chat.id);
 
     if (family) {
