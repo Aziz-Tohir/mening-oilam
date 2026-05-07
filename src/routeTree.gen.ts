@@ -21,6 +21,7 @@ import { Route as DashboardRequestsRouteImport } from './routes/dashboard.reques
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardMemoriesRouteImport } from './routes/dashboard.memories'
 import { Route as DashboardMembersRouteImport } from './routes/dashboard.members'
+import { Route as DashboardLogsRouteImport } from './routes/dashboard.logs'
 import { Route as DashboardKinshipRouteImport } from './routes/dashboard.kinship'
 import { Route as DashboardFamiliesRouteImport } from './routes/dashboard.families'
 import { Route as DashboardEventsRouteImport } from './routes/dashboard.events'
@@ -92,6 +93,11 @@ const DashboardMembersRoute = DashboardMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardLogsRoute = DashboardLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardKinshipRoute = DashboardKinshipRouteImport.update({
   id: '/kinship',
   path: '/kinship',
@@ -156,6 +162,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/families': typeof DashboardFamiliesRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/families': typeof DashboardFamiliesRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
@@ -204,6 +212,7 @@ export interface FileRoutesById {
   '/dashboard/events': typeof DashboardEventsRoute
   '/dashboard/families': typeof DashboardFamiliesRoute
   '/dashboard/kinship': typeof DashboardKinshipRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/members': typeof DashboardMembersRoute
   '/dashboard/memories': typeof DashboardMemoriesRoute
   '/dashboard/profile': typeof DashboardProfileRoute
@@ -230,6 +239,7 @@ export interface FileRouteTypes {
     | '/dashboard/events'
     | '/dashboard/families'
     | '/dashboard/kinship'
+    | '/dashboard/logs'
     | '/dashboard/members'
     | '/dashboard/memories'
     | '/dashboard/profile'
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/dashboard/events'
     | '/dashboard/families'
     | '/dashboard/kinship'
+    | '/dashboard/logs'
     | '/dashboard/members'
     | '/dashboard/memories'
     | '/dashboard/profile'
@@ -277,6 +288,7 @@ export interface FileRouteTypes {
     | '/dashboard/events'
     | '/dashboard/families'
     | '/dashboard/kinship'
+    | '/dashboard/logs'
     | '/dashboard/members'
     | '/dashboard/memories'
     | '/dashboard/profile'
@@ -392,6 +404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardMembersRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/logs': {
+      id: '/dashboard/logs'
+      path: '/logs'
+      fullPath: '/dashboard/logs'
+      preLoaderRoute: typeof DashboardLogsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/kinship': {
       id: '/dashboard/kinship'
       path: '/kinship'
@@ -470,6 +489,7 @@ interface DashboardRouteChildren {
   DashboardEventsRoute: typeof DashboardEventsRoute
   DashboardFamiliesRoute: typeof DashboardFamiliesRoute
   DashboardKinshipRoute: typeof DashboardKinshipRoute
+  DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardMembersRoute: typeof DashboardMembersRoute
   DashboardMemoriesRoute: typeof DashboardMemoriesRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
@@ -486,6 +506,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardEventsRoute: DashboardEventsRoute,
   DashboardFamiliesRoute: DashboardFamiliesRoute,
   DashboardKinshipRoute: DashboardKinshipRoute,
+  DashboardLogsRoute: DashboardLogsRoute,
   DashboardMembersRoute: DashboardMembersRoute,
   DashboardMemoriesRoute: DashboardMemoriesRoute,
   DashboardProfileRoute: DashboardProfileRoute,
