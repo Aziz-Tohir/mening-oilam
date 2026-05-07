@@ -135,6 +135,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
     genderFilter: z.enum(["all","male","female"]).default("all"),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
     const db = getAdminDb();
     let recipients = 0, failures = 0;
     const failedTargets: Array<{ telegram_id: number; member_id?: string; full_name?: string; error: string }> = [];
