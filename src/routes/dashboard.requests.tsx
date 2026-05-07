@@ -5,38 +5,33 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { listMyFamilies } from "@/server/families.functions";
 import { listJoinRequests } from "@/server/admin.functions";
-import { callServer } from "@/lib/serverCall";
+import { useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { relationshipLabel } from "@/lib/relationships";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/requests")({
   component: RequestsPage,
 });
 
 function RequestsPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); else setLoading(false); })
-      .catch((e: any) => { toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"); setLoading(false); });
-  }, []);
-  useEffect(() => {
-    if (!familyId) return;
-    setLoading(true);
-    callServer(listJoinRequests, { familyId })
-      .then(r => setRows(r.requests))
-      .catch((e: any) => toast.error(e?.message ?? "So'rovlarni yuklab bo'lmadi"))
-      .finally(() => setLoading(false));
-  }, [familyId]);
+  const { data, ts, stale, loading, refetch } = useCachedServer<{ requests: any[] }>(
+    `requests:${familyId}`, listJoinRequests, { familyId }, { enabled: !!familyId },
+  );
+  const rows = data?.requests ?? [];
+  const reload = () => { invalidateCache(`requests:${familyId}`); refetch(); };
 
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Qo'shilish so'rovlari</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold">Qo'shilish so'rovlari</h1>
+          <CacheStatus ts={ts} stale={stale} loading={loading && !data} onRefresh={reload} />
+        </div>
         <Select value={familyId} onValueChange={setFamilyId}>
           <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
@@ -49,7 +44,7 @@ function RequestsPage() {
             <tr><th className="p-3">Arizachi</th><th className="p-3">Aloqa</th><th className="p-3">Status</th><th className="p-3">Sana</th></tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">Yuklanmoqda…</td></tr>}
+            {loading && !data && <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">Yuklanmoqda…</td></tr>}
             {!loading && rows.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">So'rovlar yo'q</td></tr>}
             {rows.map(r => (
               <tr key={r.id} className="border-t border-border">
