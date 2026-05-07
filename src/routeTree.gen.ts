@@ -29,6 +29,7 @@ import { Route as DashboardEventsRouteImport } from './routes/dashboard.events'
 import { Route as DashboardBotRouteImport } from './routes/dashboard.bot'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
 import { Route as ApiPublicTelegramPollRouteImport } from './routes/api/public/telegram/poll'
+import { Route as ApiPublicTelegramMiniappRegisterRouteImport } from './routes/api/public/telegram/miniapp-register'
 import { Route as ApiPublicTelegramMiniappAuthRouteImport } from './routes/api/public/telegram/miniapp-auth'
 import { Route as ApiPublicCronSentimentAnalysisRouteImport } from './routes/api/public/cron/sentiment-analysis'
 import { Route as ApiPublicCronProcessJoinRequestsRouteImport } from './routes/api/public/cron/process-join-requests'
@@ -136,6 +137,12 @@ const ApiPublicTelegramPollRoute = ApiPublicTelegramPollRouteImport.update({
   path: '/api/public/telegram/poll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTelegramMiniappRegisterRoute =
+  ApiPublicTelegramMiniappRegisterRouteImport.update({
+    id: '/api/public/telegram/miniapp-register',
+    path: '/api/public/telegram/miniapp-register',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTelegramMiniappAuthRoute =
   ApiPublicTelegramMiniappAuthRouteImport.update({
     id: '/api/public/telegram/miniapp-auth',
@@ -191,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
+  '/api/public/telegram/miniapp-register': typeof ApiPublicTelegramMiniappRegisterRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -217,6 +225,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
+  '/api/public/telegram/miniapp-register': typeof ApiPublicTelegramMiniappRegisterRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -245,6 +254,7 @@ export interface FileRoutesById {
   '/api/public/cron/process-join-requests': typeof ApiPublicCronProcessJoinRequestsRoute
   '/api/public/cron/sentiment-analysis': typeof ApiPublicCronSentimentAnalysisRoute
   '/api/public/telegram/miniapp-auth': typeof ApiPublicTelegramMiniappAuthRoute
+  '/api/public/telegram/miniapp-register': typeof ApiPublicTelegramMiniappRegisterRoute
   '/api/public/telegram/poll': typeof ApiPublicTelegramPollRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
 }
@@ -274,6 +284,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/process-join-requests'
     | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
+    | '/api/public/telegram/miniapp-register'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -300,6 +311,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/process-join-requests'
     | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
+    | '/api/public/telegram/miniapp-register'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
   id:
@@ -327,6 +339,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/process-join-requests'
     | '/api/public/cron/sentiment-analysis'
     | '/api/public/telegram/miniapp-auth'
+    | '/api/public/telegram/miniapp-register'
     | '/api/public/telegram/poll'
     | '/api/public/telegram/webhook'
   fileRoutesById: FileRoutesById
@@ -340,6 +353,7 @@ export interface RootRouteChildren {
   ApiPublicCronProcessJoinRequestsRoute: typeof ApiPublicCronProcessJoinRequestsRoute
   ApiPublicCronSentimentAnalysisRoute: typeof ApiPublicCronSentimentAnalysisRoute
   ApiPublicTelegramMiniappAuthRoute: typeof ApiPublicTelegramMiniappAuthRoute
+  ApiPublicTelegramMiniappRegisterRoute: typeof ApiPublicTelegramMiniappRegisterRoute
   ApiPublicTelegramPollRoute: typeof ApiPublicTelegramPollRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
 }
@@ -486,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelegramPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/telegram/miniapp-register': {
+      id: '/api/public/telegram/miniapp-register'
+      path: '/api/public/telegram/miniapp-register'
+      fullPath: '/api/public/telegram/miniapp-register'
+      preLoaderRoute: typeof ApiPublicTelegramMiniappRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/telegram/miniapp-auth': {
       id: '/api/public/telegram/miniapp-auth'
       path: '/api/public/telegram/miniapp-auth'
@@ -573,6 +594,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronProcessJoinRequestsRoute: ApiPublicCronProcessJoinRequestsRoute,
   ApiPublicCronSentimentAnalysisRoute: ApiPublicCronSentimentAnalysisRoute,
   ApiPublicTelegramMiniappAuthRoute: ApiPublicTelegramMiniappAuthRoute,
+  ApiPublicTelegramMiniappRegisterRoute: ApiPublicTelegramMiniappRegisterRoute,
   ApiPublicTelegramPollRoute: ApiPublicTelegramPollRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,
 }

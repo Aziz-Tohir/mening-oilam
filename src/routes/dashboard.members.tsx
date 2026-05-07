@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { listMyFamilies } from "@/server/families.functions";
-import { listMembers, setMemberStatus, updateMember } from "@/server/admin.functions";
+import { listMembers, setMemberStatus, updateMember, addMemberManually } from "@/server/admin.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 import { relationshipLabel, RELATIONSHIP_OPTIONS } from "@/lib/relationships";
@@ -52,6 +52,7 @@ function MembersPage() {
   const { isAdmin } = useUserRole();
 
   const [editing, setEditing] = useState<Member | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const toggleBlock = async (m: Member) => {
     const next = m.status === "blocked" ? "active" : "blocked";
@@ -67,10 +68,15 @@ function MembersPage() {
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2"><h1 className="text-2xl font-bold">A'zolar</h1><CacheStatus ts={memTs} stale={memStale} loading={loading && !memRes} onRefresh={() => { invalidateCache(`members:${familyId}`); refetch(); }} /></div>
-        <Select value={familyId} onValueChange={setFamilyId}>
-          <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Oila tanlang" /></SelectTrigger>
-          <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          {isAdmin && familyId && (
+            <Button size="sm" onClick={() => setAdding(true)}>+ A'zo qo'shish</Button>
+          )}
+          <Select value={familyId} onValueChange={setFamilyId}>
+            <SelectTrigger className="w-full sm:w-64"><SelectValue placeholder="Oila tanlang" /></SelectTrigger>
+            <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
       <Card className="mt-6 overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
@@ -119,6 +125,14 @@ function MembersPage() {
           familyId={familyId}
           onClose={() => setEditing(null)}
           onSaved={() => { invalidateCache(`members:${familyId}`); refetch(); setEditing(null); }}
+        />
+      )}
+
+      {adding && familyId && (
+        <AddMemberDialog
+          familyId={familyId}
+          onClose={() => setAdding(false)}
+          onSaved={() => { invalidateCache(`members:${familyId}`); refetch(); setAdding(false); }}
         />
       )}
     </div>
@@ -445,6 +459,89 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => { clearPending(); onClose(); }}>Bekor qilish</Button>
             <Button type="submit" disabled={saving || hasErrors || !!pending}>{saving ? "Saqlanmoqda…" : "Saqlash"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddMemberDialog({ familyId, onClose, onSaved }: { familyId: string; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({
+    full_name: "", telegram_id: "", username: "",
+    gender: "" as "" | "male" | "female",
+    birth_date: "", phone: "", relationship_to_inviter: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.full_name.trim() || !form.telegram_id.trim()) {
+      toast.error("Ism va Telegram ID majburiy");
+      return;
+    }
+    setSaving(true);
+    try {
+      await callServer(addMemberManually, {
+        familyId,
+        full_name: form.full_name.trim(),
+        telegram_id: Number(form.telegram_id.trim()),
+        username: form.username.trim() || null,
+        gender: (form.gender || null) as any,
+        birth_date: form.birth_date || null,
+        phone: form.phone.trim() || null,
+        relationship_to_inviter: form.relationship_to_inviter || null,
+      });
+      toast.success("A'zo qo'shildi");
+      onSaved();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Qo'shib bo'lmadi");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle>Yangi a'zo qo'shish</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <Label>To'liq ism *</Label>
+            <Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
+          </div>
+          <div>
+            <Label>Telegram ID *</Label>
+            <Input required type="number" value={form.telegram_id} onChange={(e) => setForm({ ...form, telegram_id: e.target.value })} placeholder="123456789" />
+            <p className="mt-1 text-xs text-muted-foreground">@userinfobot orqali oling</p>
+          </div>
+          <div>
+            <Label>Username (ixtiyoriy)</Label>
+            <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="username (without @)" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Tug'ilgan kun</Label>
+              <Input type="date" value={form.birth_date} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
+            </div>
+            <div>
+              <Label>Jins</Label>
+              <Select value={form.gender || undefined} onValueChange={(v) => setForm({ ...form, gender: v as any })}>
+                <SelectTrigger><SelectValue placeholder="Tanlanmagan" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Erkak</SelectItem>
+                  <SelectItem value="female">Ayol</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Telefon</Label>
+            <Input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+998…" />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>Bekor qilish</Button>
+            <Button type="submit" disabled={saving}>{saving ? "Qo'shilmoqda…" : "Qo'shish"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

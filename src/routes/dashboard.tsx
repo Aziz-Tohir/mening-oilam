@@ -20,6 +20,9 @@ function DashboardLayout() {
   const location = useLocation();
   const [tgAuthing, setTgAuthing] = useState(false);
   const [tgReady, setTgReady] = useState(typeof window !== "undefined" && !!(window as any).Telegram?.WebApp);
+  const [tgError, setTgError] = useState<{ kind: "not_registered" | "pending" | "other"; message: string } | null>(null);
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviting, setInviting] = useState(false);
 
   // Lazy-load Telegram WebApp script (only on dashboard, not on landing)
   useEffect(() => {
@@ -36,7 +39,7 @@ function DashboardLayout() {
 
   // Telegram Mini App auto-login
   useEffect(() => {
-    if (loading || user || tgAuthing || !tgReady) return;
+    if (loading || user || tgAuthing || !tgReady || tgError) return;
     const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
     const initData = tg?.initData;
     if (!initData) return;
@@ -51,28 +54,62 @@ function DashboardLayout() {
           body: JSON.stringify({ initData }),
         });
         const json = await res.json();
-        if (!res.ok) throw new Error(json?.message ?? json?.error ?? "Login xatosi");
+        if (!res.ok) {
+          if (json?.error === "not_registered") {
+            setTgError({ kind: "not_registered", message: json.message ?? "Siz hech qaysi oilada a'zo emassiz." });
+            return;
+          }
+          if (json?.error === "pending") {
+            setTgError({ kind: "pending", message: json.message ?? "So'rov admin tasdig'ini kutmoqda." });
+            return;
+          }
+          throw new Error(json?.message ?? json?.error ?? `Login xatosi (${res.status})`);
+        }
         const { error } = await supabase.auth.verifyOtp({
           type: "magiclink",
           token_hash: json.token_hash,
         });
         if (error) throw error;
       } catch (e: any) {
-        toast.error(e?.message ?? "Telegram orqali kirish amalga oshmadi");
-        navigate({ to: "/login" });
+        setTgError({ kind: "other", message: e?.message ?? "Telegram orqali kirish amalga oshmadi" });
       } finally {
         setTgAuthing(false);
       }
     })();
-  }, [loading, user, tgAuthing, tgReady, navigate]);
+  }, [loading, user, tgAuthing, tgReady, tgError]);
 
   useEffect(() => {
     if (loading || tgAuthing || !tgReady) return;
-    if (!user) {
+    if (!user && !tgError) {
       const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
       if (!tg?.initData) navigate({ to: "/login" });
     }
-  }, [loading, user, tgAuthing, tgReady, navigate]);
+  }, [loading, user, tgAuthing, tgReady, tgError, navigate]);
+
+  const submitInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = inviteCode.trim().toUpperCase();
+    if (!code) return;
+    setInviting(true);
+    try {
+      const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
+      const initData = tg?.initData;
+      const res = await fetch("/api/public/telegram/miniapp-register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initData, invite_code: code }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.message ?? json?.error ?? `Xato (${res.status})`);
+      toast.success("So'rov yuborildi! Admin tasdiqlashidan keyin qayta kirib ko'ring.");
+      setTgError({ kind: "pending", message: "So'rovingiz adminga yuborildi. Tasdiqlangach mini-app'ga kira olasiz." });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Xato");
+    } finally {
+      setInviting(false);
+    }
+  };
+
 
   // Redirect non-admins away from admin-only pages
   useEffect(() => {
@@ -87,6 +124,38 @@ function DashboardLayout() {
       navigate({ to: "/dashboard/tree" });
     }
   }, [user, roleLoading, isAdmin, isSuperadmin, location.pathname, navigate]);
+
+  if (tgError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/20">
+        <div className="w-full max-w-md rounded-lg border border-border bg-background p-6 space-y-4">
+          <h2 className="text-lg font-semibold">
+            {tgError.kind === "pending" ? "⏳ Tasdiq kutilmoqda" : "🔐 Oilaga qo'shilish"}
+          </h2>
+          <p className="text-sm text-muted-foreground">{tgError.message}</p>
+          {tgError.kind === "not_registered" && (
+            <form onSubmit={submitInvite} className="space-y-2">
+              <label className="text-sm font-medium">Taklif kodi (8 belgi)</label>
+              <input
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                maxLength={8}
+                placeholder="ABCD1234"
+                className="w-full rounded border border-input bg-background px-3 py-2 text-sm uppercase tracking-widest"
+              />
+              <p className="text-xs text-muted-foreground">Adminingizdan yoki guruhda <code>/invite</code> orqali oling.</p>
+              <Button type="submit" className="w-full" disabled={inviting || inviteCode.trim().length < 4}>
+                {inviting ? "Yuborilmoqda…" : "So'rov yuborish"}
+              </Button>
+            </form>
+          )}
+          <Button variant="outline" className="w-full" onClick={() => { setTgError(null); window.location.reload(); }}>
+            Qayta urinish
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || tgAuthing || !user) return <div className="p-8 text-muted-foreground">Yuklanmoqda…</div>;
 
