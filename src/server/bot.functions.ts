@@ -175,7 +175,6 @@ export const sendBroadcast = createServerFn({ method: "POST" })
         }
       }
     }
-    }
     await db.from("bot_broadcasts").insert({
       family_id: data.familyId, target: data.target, message_text: data.text,
       sent_by_user_id: context.userId, recipients_count: recipients, failures_count: failures,
