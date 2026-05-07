@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { listMyFamilies, regenerateInviteCode, getInviteInfo } from "@/server/families.functions";
 import { getSettings, updateSettings } from "@/server/admin.functions";
-import { callServer } from "@/lib/serverCall";
+import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/settings")({
@@ -16,31 +17,33 @@ export const Route = createFileRoute("/dashboard/settings")({
 });
 
 function SettingsPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
-  const [settings, setSettings] = useState<any>(null);
-  const [invite, setInvite] = useState<{ invite_code: string | null; bot_username: string | null } | null>(null);
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
-      .catch((e: any) => toast.error(e?.message ?? "Oilalarni yuklab bo'lmadi"));
-  }, []);
-  useEffect(() => {
-    if (familyId) {
-      callServer(getSettings, { familyId })
-        .then(r => setSettings(r.settings))
-        .catch((e: any) => toast.error(e?.message ?? "Sozlamalarni yuklab bo'lmadi"));
-      callServer(getInviteInfo, { familyId })
-        .then(r => setInvite(r))
-        .catch(() => {});
-    }
-  }, [familyId]);
+  const { data: setRes, ts, stale, loading, refetch: refetchSet } = useCachedServer<{ settings: any }>(
+    `settings:${familyId}`, getSettings, { familyId }, { enabled: !!familyId },
+  );
+  const { data: invRes, refetch: refetchInv } = useCachedServer<{ invite_code: string | null; bot_username: string | null }>(
+    `invite:${familyId}`, getInviteInfo, { familyId }, { enabled: !!familyId },
+  );
+  const [settingsLocal, setSettingsLocal] = useState<any>(null);
+  useEffect(() => { if (setRes?.settings) setSettingsLocal(setRes.settings); }, [setRes]);
+  const settings = settingsLocal ?? setRes?.settings ?? null;
+  const invite = invRes ?? null;
+
+  const reload = () => {
+    invalidateCache(`settings:${familyId}`);
+    invalidateCache(`invite:${familyId}`);
+    refetchSet(); refetchInv();
+  };
 
   const regenInvite = async () => {
     try {
-      const r = await callServer(regenerateInviteCode, { familyId });
-      setInvite(prev => ({ invite_code: r.invite_code, bot_username: prev?.bot_username ?? null }));
+      await callServer(regenerateInviteCode, { familyId });
+      invalidateCache(`invite:${familyId}`);
+      refetchInv();
       toast.success("Yangi taklif kodi yaratildi");
     } catch (e: any) { toast.error(e?.message ?? "Xato"); }
   };
@@ -50,9 +53,12 @@ function SettingsPage() {
     : null;
 
   const save = async (patch: any) => {
-    setSettings({ ...settings, ...patch });
-    try { await callServer(updateSettings, { familyId, patch }); toast.success("Saqlandi"); }
-    catch (e: any) { toast.error(e?.message ?? "Saqlab bo'lmadi"); }
+    setSettingsLocal({ ...settings, ...patch });
+    try {
+      await callServer(updateSettings, { familyId, patch });
+      invalidateCache(`settings:${familyId}`);
+      toast.success("Saqlandi");
+    } catch (e: any) { toast.error(e?.message ?? "Saqlab bo'lmadi"); }
   };
 
   if (!settings) return <p className="text-muted-foreground">Yuklanmoqda…</p>;
@@ -60,7 +66,10 @@ function SettingsPage() {
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">Sozlamalar</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold">Sozlamalar</h1>
+          <CacheStatus ts={ts} stale={stale} loading={loading && !setRes} onRefresh={reload} />
+        </div>
         <Select value={familyId} onValueChange={setFamilyId}>
           <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
@@ -80,7 +89,7 @@ function SettingsPage() {
             <Row label="Xush kelibsiz xabari auto-delete (sek)">
               <Input type="number" className="w-24" value={settings.welcome_message_auto_delete_seconds ?? 0}
                 onBlur={(e) => save({ welcome_message_auto_delete_seconds: Number(e.target.value) })}
-                onChange={(e) => setSettings({ ...settings, welcome_message_auto_delete_seconds: Number(e.target.value) })} />
+                onChange={(e) => setSettingsLocal({ ...settings, welcome_message_auto_delete_seconds: Number(e.target.value) })} />
             </Row>
           </CardContent>
         </Card>
@@ -97,12 +106,12 @@ function SettingsPage() {
             <Row label="Admin javobsiz so'rovni avto-tasdiqlash (soat, 0=o'chirilgan)">
               <Input type="number" className="w-24" value={settings.join_request_auto_approve_timeout_hours ?? 0}
                 onBlur={(e) => save({ join_request_auto_approve_timeout_hours: Number(e.target.value) })}
-                onChange={(e) => setSettings({ ...settings, join_request_auto_approve_timeout_hours: Number(e.target.value) })} />
+                onChange={(e) => setSettingsLocal({ ...settings, join_request_auto_approve_timeout_hours: Number(e.target.value) })} />
             </Row>
             <Row label="Admin javobsiz so'rovni avto-rad etish (soat)">
               <Input type="number" className="w-24" value={settings.join_request_auto_reject_timeout_hours ?? 0}
                 onBlur={(e) => save({ join_request_auto_reject_timeout_hours: Number(e.target.value) })}
-                onChange={(e) => setSettings({ ...settings, join_request_auto_reject_timeout_hours: Number(e.target.value) })} />
+                onChange={(e) => setSettingsLocal({ ...settings, join_request_auto_reject_timeout_hours: Number(e.target.value) })} />
             </Row>
           </CardContent>
         </Card>
@@ -174,27 +183,27 @@ function SettingsPage() {
             <Row label="Log guruh chat ID (forum)">
               <Input className="w-44" type="number" value={settings.log_telegram_chat_id ?? ""}
                 onBlur={(e) => save({ log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_telegram_chat_id: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Amallar (action_logs)">
               <Input className="w-32" type="number" value={settings.log_topic_actions ?? ""}
                 onBlur={(e) => save({ log_topic_actions: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_actions: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_actions: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Admin (qo'shilish so'rovlari)">
               <Input className="w-32" type="number" value={settings.log_topic_admin ?? ""}
                 onBlur={(e) => save({ log_topic_admin: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_admin: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_admin: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Moderatsiya (delete/mute/ban)">
               <Input className="w-32" type="number" value={settings.log_topic_moderation ?? ""}
                 onBlur={(e) => save({ log_topic_moderation: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_moderation: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_moderation: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Topic: Backup (JSON dump)">
               <Input className="w-32" type="number" value={settings.log_topic_backup ?? ""}
                 onBlur={(e) => save({ log_topic_backup: e.target.value ? Number(e.target.value) : null })}
-                onChange={(e) => setSettings({ ...settings, log_topic_backup: e.target.value ? Number(e.target.value) : null })} />
+                onChange={(e) => setSettingsLocal({ ...settings, log_topic_backup: e.target.value ? Number(e.target.value) : null })} />
             </Row>
             <Row label="Backup chastotasi">
               <Select value={settings.backup_frequency ?? "weekly"} onValueChange={(v) => save({ backup_frequency: v })}>

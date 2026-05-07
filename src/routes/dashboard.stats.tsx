@@ -5,8 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { listMyFamilies } from "@/server/families.functions";
 import { getFamilyMessageStats } from "@/server/stats.functions";
-import { callServer } from "@/lib/serverCall";
-import { toast } from "sonner";
+import { useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 export const Route = createFileRoute("/dashboard/stats")({
@@ -18,27 +18,23 @@ function medal(i: number) {
 }
 
 function StatsPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState<string>("");
-  const [data, setData] = useState<{ top: any[]; trend: any[]; total: number } | null>(null);
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
 
-  useEffect(() => {
-    callServer(listMyFamilies)
-      .then(r => { setFamilies(r.families); if (r.families[0]) setFamilyId(r.families[0].id); })
-      .catch((e: any) => toast.error(e?.message ?? "Xato"));
-  }, []);
-
-  useEffect(() => {
-    if (!familyId) return;
-    callServer(getFamilyMessageStats, { familyId, days: 30 })
-      .then(setData)
-      .catch((e: any) => toast.error(e?.message ?? "Xato"));
-  }, [familyId]);
+  const { data, ts, stale, loading, refetch } = useCachedServer<{ top: any[]; trend: any[]; total: number }>(
+    `stats:${familyId}`, getFamilyMessageStats, { familyId, days: 30 }, { enabled: !!familyId },
+  );
+  const reload = () => { invalidateCache(`stats:${familyId}`); refetch(); };
 
   return (
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold">📊 Statistika va Reyting</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold">📊 Statistika va Reyting</h1>
+          <CacheStatus ts={ts} stale={stale} loading={loading && !data} onRefresh={reload} />
+        </div>
         <Select value={familyId} onValueChange={setFamilyId}>
           <SelectTrigger className="w-full sm:w-64"><SelectValue /></SelectTrigger>
           <SelectContent>{families.map(f => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>

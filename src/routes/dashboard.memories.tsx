@@ -5,39 +5,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { listMyFamilies } from "@/server/families.functions";
 import { listMemories, listNominations } from "@/server/awards.functions";
-import { callServer } from "@/lib/serverCall";
-import { toast } from "sonner";
+import { useCachedServer, invalidateCache } from "@/lib/serverCall";
+import { CacheStatus } from "@/components/CacheStatus";
 
 export const Route = createFileRoute("/dashboard/memories")({
   component: MemoriesPage,
 });
 
 function MemoriesPage() {
-  const [families, setFamilies] = useState<any[]>([]);
+  const { data: famRes } = useCachedServer<{ families: any[] }>("families:mine", listMyFamilies);
+  const families = famRes?.families ?? [];
   const [familyId, setFamilyId] = useState("");
+  useEffect(() => { if (!familyId && families[0]) setFamilyId(families[0].id); }, [families, familyId]);
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [memories, setMemories] = useState<any[]>([]);
-  const [nominations, setNominations] = useState<any[]>([]);
 
-  useEffect(() => {
-    callServer(listMyFamilies).then(r => {
-      setFamilies(r.families);
-      if (r.families[0]) setFamilyId(r.families[0].id);
-    });
-  }, []);
+  const { data: memRes, ts: memTs, stale: memStale, loading: memLoading, refetch: refetchMem } = useCachedServer<{ memories: any[] }>(
+    `memories:${familyId}:${year}`, listMemories, { familyId, year }, { enabled: !!familyId },
+  );
+  const { data: nomRes, ts: nomTs, stale: nomStale, loading: nomLoading, refetch: refetchNom } = useCachedServer<{ nominations: any[] }>(
+    `nominations:${familyId}:${year}`, listNominations, { familyId, year }, { enabled: !!familyId },
+  );
+  const memories = memRes?.memories ?? [];
+  const nominations = nomRes?.nominations ?? [];
 
-  useEffect(() => {
-    if (!familyId) return;
-    callServer(listMemories, { familyId, year }).then(r => setMemories(r.memories)).catch((e: any) => toast.error(e?.message));
-    callServer(listNominations, { familyId, year }).then(r => setNominations(r.nominations)).catch(() => {});
-  }, [familyId, year]);
+  const reload = () => {
+    invalidateCache(`memories:${familyId}:${year}`);
+    invalidateCache(`nominations:${familyId}:${year}`);
+    refetchMem(); refetchNom();
+  };
 
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Xotiralar va Mukofotlar</h1>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-2xl font-bold">Xotiralar va Mukofotlar</h1>
+          <CacheStatus
+            ts={Math.max(memTs ?? 0, nomTs ?? 0) || null}
+            stale={memStale || nomStale}
+            loading={(memLoading && !memRes) || (nomLoading && !nomRes)}
+            onRefresh={reload}
+          />
+        </div>
         <div className="flex gap-2">
           <Select value={familyId} onValueChange={setFamilyId}>
             <SelectTrigger className="w-44"><SelectValue placeholder="Oila" /></SelectTrigger>
