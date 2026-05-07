@@ -265,6 +265,11 @@ async function handleMessage(msg: TgMessage) {
     return;
   }
 
+  if (text === "/privacy" || text === "/maxfiylik") {
+    await sendPrivacyMenu(userId);
+    return;
+  }
+
   // Photo sent in private chat → set as avatar for active membership(s)
   if (msg.photo && Array.isArray(msg.photo) && msg.photo.length > 0) {
     await handleAvatarPhoto(userId, msg);
