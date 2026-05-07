@@ -1,29 +1,48 @@
-Topilgan dalillar:
-- Bazada hozir bitta oila bor: `Usmonovlar`, `Weekand` guruhiga ulangan.
-- Bot guruhga qo‘shilganda avval to‘g‘ri ulangan, lekin admin qilinganda `my_chat_member` yana kelib, kod `linkedFamilyId` topmagani uchun “hali oilaga bog‘lanmagan” xabarini qayta yuboryapti.
-- Superadmin global roli `family_id = null` bo‘lgan user uchun `useUserRole` va `assertSuperadmin` ishlashi notekis: `user_roles` RLS siyosati `family_id = null` qatorni ko‘rsatmaydi, shuning uchun admin UI ba’zan loading/permission muammosiga tushadi.
-- Mini App “profile mavjud emas” holati ehtimol auth user/profiles/family_members bog‘lanishi va eski `telegram.local` userlarni topish logikasidagi bo‘shliqlardan kelmoqda.
+## Hozirgi holat (tashxis)
 
-Reja:
-1. Superadmin rolini barqaror qilish
-   - `assertSuperadmin` server tekshiruvini admin client orqali tekshiradigan qilaman, shunda global superadmin `family_id = null` bo‘lsa ham admin funksiyalar ishlaydi.
-   - `useUserRole` uchun server-side role resolver qo‘shaman yoki mavjud tekshiruvni RLSga bog‘liq bo‘lmaydigan qilaman.
-   - `listMyFamilies`da global superadmin bo‘lsa barcha oilalarni qaytarish imkonini qo‘shaman, shunda dashboard select bo‘sh qolmaydi.
+Bazani tekshirdim — muammo aniqlandi:
 
-2. Doimiy loadingni to‘xtatish
-   - `useCachedServer` xatoda ham `loading=false` qilib, xatoni UIga qaytaradigan holatni aniq qilaman.
-   - Settings/tree/stats kabi oila select ishlatadigan sahifalarda “oila yo‘q”, “xatolik”, “yuklanmoqda” holatlarini ajrataman.
+| Ma'lumot | Holat |
+|---|---|
+| `family_members` jadvalda jami yozuv | **1 ta** (faqat Tohirjon — oila egasi) |
+| `join_requests` jadvali | **bo'sh** |
+| Nodiraxon (tg `6892492830`) profili | mavjud, lekin hech qaerda a'zo emas |
+| `bot_sessions` | **bo'sh** (botda /start bossangiz, sessiya yozilishi kerak edi) |
 
-3. Mini App profil bog‘lanishini mustahkamlash
-   - `miniapp-auth` Telegram ID bo‘yicha `family_members`, `profiles`, mavjud `tg<id>@telegram.local` user va web user profillarini izchil bog‘laydigan qilaman.
-   - Agar user oilani web/bot orqali yaratgan bo‘lsa, Mini App kirishda `family_members` va `user_roles` avtomatik idempotent tiklanadi.
-   - “Profile mavjud emas” o‘rniga aniqroq xabar qaytariladi: avval botda `/start`, yoki admin tasdig‘i kutilmoqda.
+Demak amalda hech kim botda muvaffaqiyatli /start bosib oilaga qo'shilmagan. Mini-app esa "Yuklanmoqda…" ko'rinishida qotib qoladi, chunki:
 
-4. Telegram guruh admin qilinganda noto‘g‘ri “bog‘lanmagan” xabarini tuzatish
-   - `handleMyChatMember` boshida chat ID bo‘yicha mavjud oilani tekshiraman.
-   - Agar guruh allaqachon ulangan bo‘lsa, admin/member status o‘zgarishida `bot_added_to_group` emas, masalan `bot_status_updated` log yoziladi va “bog‘lanmagan” prompt yuborilmaydi.
-   - Auto-linkdan keyin group cache invalidation qo‘shaman, shunda keyingi xabarlar eski “ulanmagan” keshga tushmaydi.
+1. **Oddiy user uchun**: `miniapp-auth` `family_members.telegram_id` topa olmaydi → 403 qaytaradi, lekin `dashboard.tsx`'dagi `useEffect`'da `tgAuthing=false` bo'ladi-yu, `user=null` qoladi va `tg.initData` mavjud bo'lgani uchun `/login`'ga ham yo'naltirmaydi → cheksiz "Yuklanmoqda…".
+2. **Owner uchun ham**: 401/500 yuz bersa, xatoning aniq sababi ko'rinmaydi va xuddi shu loop'da qoladi.
+3. **Botda /start ishlamayapti**: sessiyalar va join_request umuman yaratilmayapti — webhook yoki handler'da muammo bo'lishi mumkin.
 
-5. Tekshirish
-   - Bazadan oilalar, rollar, memberlar va oxirgi Telegram update/loglarni qayta o‘qib tasdiqlayman.
-   - Server funksiyalarda `/dashboard/families` va oila select uchun kerakli ma’lumot qaytishini tekshiraman.
+## Yechim — to'liq oqim
+
+### 1. Botda /start oqimini tiklash va kuzatish
+- Webhook/poll holatini tekshirish (`telegram_updates_raw`'ga payload tushyaptimi?). Agar tushmasa, webhook URL'ini qayta o'rnatish.
+- `/start` handlerda har bir qadamda `action_logs`'ga diagnostic yozish — qaysi joyda to'xtab qolayotganini ko'rish uchun.
+- `/start fam_<INVITE_CODE>` deep-link uchun aniq xato xabarlari qo'shish.
+
+### 2. Mini-app auth'ni mustahkamlash (`/api/public/telegram/miniapp-auth` + `dashboard.tsx`)
+- Owner/admin profilga telegram_id bog'langan bo'lsa, `family_members` yozuvini avtomatik yaratish allaqachon bor — uni kengaytirib, **invite_code orqali kelgan oddiy user uchun ham** xuddi shunday auto-link qilish (agar yaqinda `pending_link` sessiyada bo'lsa).
+- Faqat 403 / 4xx qaytishida `dashboard.tsx` foydalanuvchini **`/login`'ga yo'naltirsin** va aniq xato `toast`'da chiqsin (hozir `tg.initData` bor bo'lsa redirect bloklangan).
+- "Doimiy Yuklanmoqda…" o'rniga: agar `tgAuthing=false && !user && initData mavjud` bo'lsa — **xato xabari + qayta urinish tugmasi** ko'rsatilsin.
+- `tg6892492830@telegram.local` kabi orphan profil bor bo'lsa, mini-app auth uni topib qayta ishlatishi kerak (hozir bor, lekin `family_members` yo'q bo'lgani uchun baribir to'xtaydi).
+
+### 3. Web orqali admin a'zo qo'shish (qo'lda fallback)
+- `dashboard.members` sahifasida **"+ Yangi a'zo"** modali: `full_name`, `telegram_id` (majburiy), `username`, `gender`, `birth_date`. Status darhol `active`.
+- Yangi server-fn `addMemberManually(familyId, …)` — `is_family_admin` orqali tekshiriladi, `getAdminDb()` ishlatiladi.
+- Bu tugma allaqachon mavjud bo'lsa, `telegram_id` majburiy maydon ekanligini tekshirish (hozir hech kim qo'shilmaganidan ko'rinib turibdi).
+
+### 4. Mini-app'da "ro'yxatdan o'tish" ekrani
+- Agar 403 `not_registered` qaytsa: mini-app oddiy login sahifasi o'rniga **"Invite kod kiriting"** ekrani ko'rsatsin, kod orqali server `join_request` yaratsin va admin tasdiqlashini kutsin.
+- Tasdiqdan keyin mini-app avtomatik qaytib kirsin.
+
+### 5. Sinov (men bajaraman, davomida ko'rsatib boraman)
+- Nodiraxon uchun qo'lda `family_members` yozuvini yaratib, mini-app login'ni tekshirish.
+- Tohirjon uchun mini-app login'ni qayta tekshirish.
+- Botda `/start` → `/start fam_<INVITE>` ketma-ketligini sinash.
+
+### Texnik tafsilotlar
+- O'zgartiriladigan fayllar: `src/routes/dashboard.tsx` (loading/redirect logikasi), `src/routes/api/public/telegram/miniapp-auth.ts` (xato shakli + invite_code bilan auto-join), `src/server/telegramHandlers.server.ts` (diagnostika), `src/routes/dashboard.members.tsx` (qo'lda qo'shish modali), yangi `src/routes/miniapp-register.tsx` yoki dialog.
+- DB o'zgarishi shart emas — RLS/funksiyalar yetarli.
+- Hech qanday yangi secret kerak emas.
