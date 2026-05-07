@@ -74,6 +74,34 @@ async function handleMyChatMember(evt: any) {
 
   const db = getAdminDb();
   const adderTgId: number | undefined = evt.from?.id;
+  const oldStatus = evt.old_chat_member?.status;
+
+  // If this group is already linked to a family, this is just a status change
+  // (e.g., member -> administrator). Don't re-prompt or treat as a new add.
+  const { data: existingFam } = await db
+    .from("families")
+    .select("id, name")
+    .eq("telegram_group_id", chat.id)
+    .maybeSingle();
+  if (existingFam) {
+    await db.from("action_logs").insert({
+      family_id: existingFam.id,
+      action: "bot_status_updated",
+      actor_telegram_id: adderTgId ?? null,
+      details: { chat_id: chat.id, title: chat.title, old: oldStatus, new: newStatus },
+    });
+    if (newStatus === "administrator" && oldStatus !== "administrator" && adderTgId) {
+      try {
+        await sendMessage(adderTgId, `✅ Bot endi <b>${existingFam.name}</b> guruhida admin. Hammasi tayyor!`, { parse_mode: "HTML" });
+      } catch {}
+    }
+    // Invalidate group cache so subsequent messages see fresh data
+    try {
+      const { invalidateCache } = await import("./cache.server");
+      invalidateCache(`fam:chat:${chat.id}`);
+    } catch {}
+    return;
+  }
 
   // Try to auto-link the group to a family using the adder's pending_link session
   let linkedFamilyId: string | null = null;
