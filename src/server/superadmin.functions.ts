@@ -3,8 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { getAdminDb } from "./db.server";
 
-async function assertSuperadmin(supabase: any, userId: string) {
-  const { data, error } = await supabase
+async function assertSuperadmin(_supabase: any, userId: string) {
+  // Use admin client because the RLS SELECT policy on user_roles hides rows
+  // where family_id IS NULL (global superadmin) from the calling user.
+  const db = getAdminDb();
+  const { data, error } = await db
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
