@@ -228,6 +228,7 @@ function TreePage() {
             <Checkbox checked={hideInactive} onCheckedChange={(v) => setHideInactive(!!v)} />
             Faqat faollar
           </label>
+          <Button size="sm" onClick={() => setRelWizardOpen(true)}>+ Yangi aloqa</Button>
           <Button variant="outline" size="sm" onClick={exportPng}>PNG</Button>
           <Button variant="outline" size="sm" onClick={exportJson}>JSON</Button>
         </div>
