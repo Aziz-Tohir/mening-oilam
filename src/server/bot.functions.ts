@@ -133,6 +133,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
     target: z.enum(["group","members"]),
     text: z.string().min(1).max(4000),
     genderFilter: z.enum(["all","male","female"]).default("all"),
+    parseMode: z.enum(["none","HTML"]).default("none"),
   }).parse(d))
   .handler(async ({ data, context }) => {
     await assertFamilyAdmin(context.supabase, context.userId, data.familyId);
