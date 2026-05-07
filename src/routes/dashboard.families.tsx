@@ -32,8 +32,10 @@ type FamilyRow = {
 };
 
 function FamiliesAdminPage() {
+  const { isSuperadmin, loading: roleLoading } = useUserRole();
+  if (!roleLoading && !isSuperadmin) return <Navigate to="/dashboard" />;
   const { data, ts, stale, loading, refetch } = useCachedServer<{ families: FamilyRow[] }>(
-    "superadmin:families", listAllFamilies,
+    "superadmin:families", listAllFamilies, { enabled: isSuperadmin },
   );
   const families = data?.families ?? [];
   const reload = () => { invalidateCache("superadmin:families"); refetch(); };
