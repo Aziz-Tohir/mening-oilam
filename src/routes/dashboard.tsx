@@ -37,6 +37,35 @@ function DashboardLayout() {
     document.head.appendChild(s);
   }, []);
 
+  // Detect account switch inside Telegram: if a Supabase session exists but
+  // the current Telegram initData user doesn't match, sign out so the new
+  // account can authenticate fresh.
+  useEffect(() => {
+    if (loading || !tgReady || tgAuthing) return;
+    const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
+    const initData: string | undefined = tg?.initData;
+    if (!user || !initData) return;
+    try {
+      const params = new URLSearchParams(initData);
+      const tgUserRaw = params.get("user");
+      const tgUser = tgUserRaw ? JSON.parse(tgUserRaw) : null;
+      const tgId = tgUser?.id ? Number(tgUser.id) : null;
+      if (!tgId) return;
+      const meta: any = (user as any).user_metadata ?? {};
+      const sessionTgId = meta.telegram_id ? Number(meta.telegram_id) : null;
+      const email: string = (user as any).email ?? "";
+      const emailTgId = (() => {
+        const m = email.match(/^tg(\d+)@telegram\.local$/);
+        return m ? Number(m[1]) : null;
+      })();
+      const knownTgId = sessionTgId ?? emailTgId;
+      if (knownTgId && knownTgId !== tgId) {
+        // Account switch detected — sign out and let the auth effect re-run.
+        supabase.auth.signOut();
+      }
+    } catch {}
+  }, [loading, user, tgReady, tgAuthing]);
+
   // Telegram Mini App auto-login
   useEffect(() => {
     if (loading || user || tgAuthing || !tgReady || tgError) return;
