@@ -44,13 +44,17 @@ export const Route = createRootRoute({
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/376b5e5e-3e7d-450f-9122-5de4681bc8f5/id-preview-003947ee--858ca73f-22bf-4369-b9d0-1671ce37994d.lovable.app-1777988893874.png" },
     ],
     links: [
+      { rel: "preconnect", href: "https://telegram.org", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://cdn.gpteng.co", crossOrigin: "anonymous" },
+      { rel: "dns-prefetch", href: "https://telegram.org" },
+      { rel: "dns-prefetch", href: "https://cdn.gpteng.co" },
       {
         rel: "stylesheet",
         href: appCss,
       },
     ],
     scripts: [
-      { src: "https://telegram.org/js/telegram-web-app.js" },
+      { src: "https://telegram.org/js/telegram-web-app.js", defer: true },
     ],
   }),
   shellComponent: RootShell,
