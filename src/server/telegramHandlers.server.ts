@@ -33,6 +33,8 @@ type TgMessage = {
   left_chat_member?: TgUser;
   reply_markup?: any;
   video?: any; photo?: any; document?: any;
+  via_bot?: TgUser;
+  caption?: string;
 };
 type TgCallback = {
   id: string;
