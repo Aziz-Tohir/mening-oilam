@@ -79,7 +79,13 @@ function DashboardLayout() {
       const knownTgId = sessionTgId ?? emailTgId;
       if (knownTgId && knownTgId !== tgId) {
         // Account switch detected — sign out and let the auth effect re-run.
-        supabase.auth.signOut();
+        // Account switch — clear all caches and sign out, then reload.
+        (async () => {
+          try { await supabase.auth.signOut(); } catch {}
+          try { localStorage.clear(); } catch {}
+          try { sessionStorage.clear(); } catch {}
+          window.location.reload();
+        })();
       }
     } catch {}
   }, [loading, user, tgReady, tgAuthing]);
