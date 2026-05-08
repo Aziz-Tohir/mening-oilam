@@ -228,10 +228,52 @@ async function handleMessage(msg: TgMessage) {
 
     if (family) {
       const settings = await getFamilySettings(family.id);
+      const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
+
+      // Begona botlarni faqat adminlar qo'sha olishi
+      if (msg.new_chat_members?.length) {
+        const adderId = msg.from?.id;
+        let adderIsAdmin = false;
+        if (adderId) {
+          try {
+            const cm: any = await getChatMember(msg.chat.id, adderId);
+            const st = cm?.status;
+            adderIsAdmin = st === "creator" || st === "administrator";
+          } catch (e) { console.warn("[bot] getChatMember failed", e); }
+        }
+        for (const u of msg.new_chat_members) {
+          if (!u.is_bot) continue;
+          if ((u.username ?? "").toLowerCase() === myBotUsername) continue;
+          if (adderIsAdmin) continue;
+          try {
+            await banChatMember(msg.chat.id, u.id);
+            const adderMention = msg.from
+              ? (msg.from.username ? `@${msg.from.username}` : `<a href="tg://user?id=${msg.from.id}">${fullName(msg.from)}</a>`)
+              : "A'zo";
+            const sent: any = await sendMessage(
+              msg.chat.id,
+              `🚫 ${adderMention}, faqat adminlar guruhga bot qo'sha oladi. <b>@${u.username ?? u.id}</b> olib tashlandi.`,
+              { parse_mode: "HTML" },
+            );
+            const autoDel = (settings as any)?.welcome_message_auto_delete_seconds ?? 0;
+            if (sent?.message_id && autoDel > 0) {
+              setTimeout(() => { deleteMessage(msg.chat.id, sent.message_id).catch(() => {}); }, autoDel * 1000);
+            }
+            await db.from("action_logs").insert({
+              family_id: family.id,
+              action: "foreign_bot_kicked",
+              actor_telegram_id: adderId ?? null,
+              details: { chat_id: msg.chat.id, bot_username: u.username ?? null, bot_id: u.id },
+            });
+            await postLog(family.id, "moderation", `🚫 Begona bot kick: <b>@${u.username ?? u.id}</b> (qo'shgan: <code>${adderId ?? "?"}</code>)`);
+          } catch (e) {
+            console.warn("[bot] failed to ban foreign bot", u.id, e);
+          }
+        }
+      }
 
       // Mute non-onboarded new members (joined directly without bot flow)
       if (msg.new_chat_members?.length && (settings as any)?.enforce_bot_onboarding !== false) {
-        const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
         for (const u of msg.new_chat_members) {
           if (u.is_bot) continue;
           if ((u.username ?? "").toLowerCase() === myBotUsername) continue;
@@ -271,15 +313,38 @@ async function handleMessage(msg: TgMessage) {
         }
       }
 
+      // Foydalanuvchi guruhdan o'zi chiqib ketdi — family_member statusini "pending" qilamiz
+      if (msg.left_chat_member && msg.from?.id === msg.left_chat_member.id && !msg.left_chat_member.is_bot) {
+        try {
+          const leftId = msg.left_chat_member.id;
+          const { data: fm } = await db.from("family_members")
+            .select("id, status")
+            .eq("family_id", family.id)
+            .eq("telegram_id", leftId)
+            .maybeSingle();
+          if (fm && (fm as any).status === "active") {
+            await db.from("family_members").update({ status: "pending" } as any).eq("id", (fm as any).id);
+            await postLog(family.id, "moderation", `👋 A'zo guruhdan chiqdi: <code>${leftId}</code>`);
+            try {
+              await sendMessage(leftId, "Siz oila guruhidan chiqib ketdingiz. Qaytib qo'shilish uchun botga /start bosing.");
+            } catch {}
+          }
+        } catch (e) { console.warn("[bot] left handler failed", e); }
+      }
+
       if ((msg.new_chat_members?.length || msg.left_chat_member) && settings?.delete_join_leave_messages !== false) {
         await deleteMessage(msg.chat.id, msg.message_id);
         return;
       }
 
-      // Foreign bots: handle media via repost (with caption tag) or just delete
-      const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
+      // Foreign bots: handle media via repost (with caption tag) or just delete.
+      // Also catches messages sent via inline bots (via_bot) — common for media-search bots.
       const fromUser: any = (msg as any).from;
-      if (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) {
+      const viaBot: any = (msg as any).via_bot;
+      const isForeignBotMsg =
+        (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) ||
+        (viaBot?.username && viaBot.username.toLowerCase() !== myBotUsername);
+      if (isForeignBotMsg) {
         await handleForeignBotMessage(msg, family.id, !!(settings as any)?.manage_foreign_bot_media);
         return;
       }
