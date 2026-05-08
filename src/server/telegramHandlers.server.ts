@@ -1195,6 +1195,7 @@ export async function approveJoinRequest(req: any) {
   if (family?.telegram_group_id) {
     // If user is already in the group (joined directly and was muted), unmute them
     try {
+      try { await unbanChatMember(family.telegram_group_id, req.applicant_telegram_id); } catch (e) { console.warn("[bot] unban on approve failed", e); }
       await unrestrictChatMember(family.telegram_group_id, req.applicant_telegram_id);
     } catch (e) {
       console.warn("[bot] unrestrict failed (user may not be in group yet)", e);
