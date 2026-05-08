@@ -637,17 +637,21 @@ async function sendStartFlow(userId: number, from: TgUser) {
   const db = getAdminDb();
   const lang = await getUserLang(db, userId);
 
-  // 1. Mavjud a'zo (telegram_id bo'yicha)
-  const { data: existingMemberships } = await db
+  // 1. Mavjud a'zo (telegram_id bo'yicha) — barcha statuslar
+  const { data: allMemberships } = await db
     .from("family_members")
-    .select("family_id, families:family_id(id, name)")
-    .eq("telegram_id", userId)
-    .eq("status", "active");
+    .select("id, status, family_id, families:family_id(id, name)")
+    .eq("telegram_id", userId);
 
-  let memberships: any[] = existingMemberships ?? [];
+  const rows: any[] = allMemberships ?? [];
+  const activeRows = rows.filter((r) => r.status === "active");
+  const blockedRows = rows.filter((r) => r.status === "blocked");
+  const pendingRows = rows.filter((r) => r.status === "pending");
+
+  let memberships: any[] = activeRows;
 
   // 1b. Owner/admin ro'lini ham tekshir — web orqali oila yaratganlar uchun
-  if (memberships.length === 0) {
+  if (memberships.length === 0 && blockedRows.length === 0 && pendingRows.length === 0) {
     const { data: profByTg } = await db.from("profiles").select("user_id").eq("telegram_id", userId).maybeSingle();
     const profileUserId = (profByTg as any)?.user_id as string | undefined;
     if (profileUserId) {
@@ -692,6 +696,38 @@ async function sendStartFlow(userId: number, from: TgUser) {
   if (memberships.length > 0) {
     const names = memberships.map((m: any) => m.families?.name).filter(Boolean).join(", ");
     await sendMessage(userId, t("already_member", lang, { names: names || "oila" }));
+    return;
+  }
+
+  if (blockedRows.length > 0) {
+    const r = blockedRows[0];
+    const famName = r.families?.name ?? "oila";
+    await sendMessage(
+      userId,
+      `🚫 Siz <b>${famName}</b> guruhidan chiqarilgansiz. Qaytib qo'shilish uchun admin tasdiqi kerak.`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [[{ text: "🔁 Qayta so'rov yuborish", callback_data: `rejoin:${r.family_id}` }]],
+        },
+      },
+    );
+    return;
+  }
+
+  if (pendingRows.length > 0) {
+    const r = pendingRows[0];
+    const famName = r.families?.name ?? "oila";
+    await sendMessage(
+      userId,
+      `⏳ <b>${famName}</b> oilasiga so'rovingiz ko'rib chiqilmoqda yoki guruhdan chiqib ketgansiz.`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [[{ text: "🔁 Qayta qo'shilish", callback_data: `rejoin:${r.family_id}` }]],
+        },
+      },
+    );
     return;
   }
 
