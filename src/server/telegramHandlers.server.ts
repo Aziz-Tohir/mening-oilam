@@ -337,17 +337,40 @@ async function handleMessage(msg: TgMessage) {
         return;
       }
 
-      // Foreign bots: handle media via repost (with caption tag) or just delete.
-      // Also catches messages sent via inline bots (via_bot) — common for media-search bots.
+      // Foreign / external messages: includes
+      //   - real bots (from.is_bot)
+      //   - inline bot results (via_bot)
+      //   - channel forwards (forward_from_chat / forward_origin.type === channel)
+      //   - sender_chat (anonymous channel post / linked channel)
+      // These are the typical vectors for ad/reklama messages, so they go
+      // through banned-words + anti-link gate BEFORE any repost.
       const fromUser: any = (msg as any).from;
       const viaBot: any = (msg as any).via_bot;
-      const isForeignBotMsg =
-        (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) ||
-        (viaBot?.username && viaBot.username.toLowerCase() !== myBotUsername);
+      const fwdChat: any = (msg as any).forward_from_chat;
+      const fwdOrigin: any = (msg as any).forward_origin;
+      const senderChat: any = (msg as any).sender_chat;
+      const isRealForeignBot = fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername;
+      const isViaForeignBot = viaBot?.username && viaBot.username.toLowerCase() !== myBotUsername;
+      const isChannelForward =
+        (fwdChat && fwdChat.type === "channel") ||
+        (fwdOrigin && (fwdOrigin.type === "channel" || fwdOrigin.type === "chat")) ||
+        (senderChat && senderChat.type === "channel");
+      const isForeignBotMsg = isRealForeignBot || isViaForeignBot || isChannelForward;
       if (isForeignBotMsg) {
-        // Avval taqiqlangan so'z / havola tekshiruvi — begona bot xabari ham
-        // moderatsiya qoidalariga bo'ysunadi.
-        const fbText = ((msg as any).text ?? (msg as any).caption ?? "").toString();
+        // Gather every place a URL/mention may hide
+        const parts: string[] = [];
+        if ((msg as any).text) parts.push((msg as any).text);
+        if ((msg as any).caption) parts.push((msg as any).caption);
+        const ents = [...((msg as any).entities ?? []), ...((msg as any).caption_entities ?? [])];
+        for (const e of ents) if (e?.url) parts.push(String(e.url));
+        if ((msg as any).link_preview_options?.url) parts.push((msg as any).link_preview_options.url);
+        const kb = (msg as any).reply_markup?.inline_keyboard ?? [];
+        for (const row of kb) for (const b of (row ?? [])) {
+          if (b?.url) parts.push(String(b.url));
+          if (b?.text) parts.push(String(b.text));
+        }
+        const fbText = parts.join("\n");
+
         let blocked: string | null = null;
         if (fbText) {
           try {
@@ -371,20 +394,29 @@ async function handleMessage(msg: TgMessage) {
             }
           }
         }
+        // Channel forwards are reklama-vector by default — delete unless explicitly allowed.
+        if (!blocked && isChannelForward && (settings as any)?.anti_forward !== false) {
+          blocked = "Kanal forward (reklama) taqiqlangan";
+        }
         if (blocked) {
           await deleteMessage(msg.chat.id, msg.message_id);
+          const botLabel = fromUser?.username ?? viaBot?.username ?? fwdChat?.username ?? fwdChat?.title ?? senderChat?.title ?? "?";
           try {
             await db.from("action_logs").insert({
               family_id: family.id,
               action: "foreign_bot_banned_word",
-              details: { reason: blocked, bot_username: fromUser?.username ?? viaBot?.username ?? null, chat_id: msg.chat.id },
+              details: { reason: blocked, source: botLabel, chat_id: msg.chat.id, channel_forward: !!isChannelForward },
             });
-            await postLog(family.id, "moderation", `🤖 Begona bot xabari o'chirildi\nBot: <code>@${fromUser?.username ?? viaBot?.username ?? "?"}</code>\nSabab: ${blocked}`);
+            await postLog(family.id, "moderation", `🤖 Begona xabar o'chirildi\nManba: <code>${escapeHtml(String(botLabel))}</code>\nSabab: ${blocked}`);
           } catch {}
           return;
         }
-        await handleForeignBotMessage(msg, family.id, !!(settings as any)?.manage_foreign_bot_media);
-        return;
+        // Real foreign bot / via_bot messages still go through repost-or-delete.
+        // For pure channel forwards, fall through to standard moderation below.
+        if (isRealForeignBot || isViaForeignBot) {
+          await handleForeignBotMessage(msg, family.id, !!(settings as any)?.manage_foreign_bot_media);
+          return;
+        }
       }
 
       // Auto-moderation (anti-link, anti-forward, anti-flood, banned words, media)
