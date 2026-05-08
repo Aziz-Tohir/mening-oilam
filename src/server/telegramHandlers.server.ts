@@ -345,6 +345,44 @@ async function handleMessage(msg: TgMessage) {
         (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) ||
         (viaBot?.username && viaBot.username.toLowerCase() !== myBotUsername);
       if (isForeignBotMsg) {
+        // Avval taqiqlangan so'z / havola tekshiruvi — begona bot xabari ham
+        // moderatsiya qoidalariga bo'ysunadi.
+        const fbText = ((msg as any).text ?? (msg as any).caption ?? "").toString();
+        let blocked: string | null = null;
+        if (fbText) {
+          try {
+            const { getBannedWords } = await import("./cache.server");
+            const words = await getBannedWords(family.id);
+            for (const w of words) {
+              try {
+                const re = w.is_regex
+                  ? new RegExp(w.pattern, "i")
+                  : new RegExp(w.pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+                if (re.test(fbText)) { blocked = `Taqiqlangan so'z: ${w.pattern}`; break; }
+              } catch {}
+            }
+          } catch (e) { console.warn("[bot] foreign banned-words check failed", e); }
+          if (!blocked && (settings as any)?.anti_link) {
+            const URL_RE = /(https?:\/\/[^\s]+|t\.me\/[^\s]+|@[A-Za-z0-9_]{4,})/i;
+            if (URL_RE.test(fbText)) {
+              const allowed: string[] = (settings as any)?.allowed_link_domains ?? [];
+              const ok = allowed.some(d => fbText.toLowerCase().includes(String(d).toLowerCase()));
+              if (!ok) blocked = "Havolalar taqiqlangan";
+            }
+          }
+        }
+        if (blocked) {
+          await deleteMessage(msg.chat.id, msg.message_id);
+          try {
+            await db.from("action_logs").insert({
+              family_id: family.id,
+              action: "foreign_bot_banned_word",
+              details: { reason: blocked, bot_username: fromUser?.username ?? viaBot?.username ?? null, chat_id: msg.chat.id },
+            });
+            await postLog(family.id, "moderation", `🤖 Begona bot xabari o'chirildi\nBot: <code>@${fromUser?.username ?? viaBot?.username ?? "?"}</code>\nSabab: ${blocked}`);
+          } catch {}
+          return;
+        }
         await handleForeignBotMessage(msg, family.id, !!(settings as any)?.manage_foreign_bot_media);
         return;
       }
