@@ -14,9 +14,33 @@ type Msg = {
   forward_from?: any;
   forward_from_chat?: any;
   forward_origin?: any;
+  sender_chat?: any;
+  entities?: any[];
+  caption_entities?: any[];
+  link_preview_options?: { url?: string };
+  reply_markup?: { inline_keyboard?: Array<Array<{ url?: string; text?: string }>> };
 };
 
 const lastMsgAt = new Map<string, number>();
+
+// Aggregate every place a URL/mention can hide so banned-word & anti-link
+// checks see ALL relevant text, not just plain caption/text.
+function gatherSearchableText(msg: Msg): string {
+  const parts: string[] = [];
+  if (msg.text) parts.push(msg.text);
+  if (msg.caption) parts.push(msg.caption);
+  const ents = [...(msg.entities ?? []), ...(msg.caption_entities ?? [])];
+  for (const e of ents) {
+    if (e?.url) parts.push(String(e.url));
+  }
+  if (msg.link_preview_options?.url) parts.push(msg.link_preview_options.url);
+  const kb = msg.reply_markup?.inline_keyboard ?? [];
+  for (const row of kb) for (const b of row ?? []) {
+    if (b?.url) parts.push(String(b.url));
+    if (b?.text) parts.push(String(b.text));
+  }
+  return parts.join("\n");
+}
 
 export async function moderateGroupMessage(msg: Msg, family: { id: string; telegram_group_id: number }) {
   const db = getAdminDb();
@@ -27,11 +51,11 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
   const settings = await getFamilySettings(family.id);
   if (!settings) return false;
 
-  const text = (msg.text ?? msg.caption ?? "").toString();
+  const text = gatherSearchableText(msg);
   let violation: string | null = null;
   let action: "delete" | "warn" | "kick" = "delete";
 
-  if (settings.anti_forward && (msg.forward_from || msg.forward_from_chat || msg.forward_origin)) {
+  if (settings.anti_forward && (msg.forward_from || msg.forward_from_chat || msg.forward_origin || msg.sender_chat)) {
     violation = "Forward xabarlar taqiqlangan"; action = "delete";
   }
   if (!violation && settings.anti_link && URL_REGEX.test(text)) {
