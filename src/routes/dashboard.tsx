@@ -37,6 +37,24 @@ function DashboardLayout() {
     document.head.appendChild(s);
   }, []);
 
+  // Full reset flow: ?reset=1 in URL OR Telegram start_param=reset
+  // Clears localStorage, sessionStorage, Supabase session, then reloads clean.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const hasReset = url.searchParams.get("reset") === "1";
+    const tg = (window as any).Telegram?.WebApp;
+    const startParam = tg?.initDataUnsafe?.start_param;
+    if (!hasReset && startParam !== "reset") return;
+    (async () => {
+      try { await supabase.auth.signOut(); } catch {}
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
+      url.searchParams.delete("reset");
+      window.location.replace(url.pathname + (url.search ? url.search : "") + url.hash);
+    })();
+  }, []);
+
   // Detect account switch inside Telegram: if a Supabase session exists but
   // the current Telegram initData user doesn't match, sign out so the new
   // account can authenticate fresh.
@@ -61,7 +79,13 @@ function DashboardLayout() {
       const knownTgId = sessionTgId ?? emailTgId;
       if (knownTgId && knownTgId !== tgId) {
         // Account switch detected — sign out and let the auth effect re-run.
-        supabase.auth.signOut();
+        // Account switch — clear all caches and sign out, then reload.
+        (async () => {
+          try { await supabase.auth.signOut(); } catch {}
+          try { localStorage.clear(); } catch {}
+          try { sessionStorage.clear(); } catch {}
+          window.location.reload();
+        })();
       }
     } catch {}
   }, [loading, user, tgReady, tgAuthing]);

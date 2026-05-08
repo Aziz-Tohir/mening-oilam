@@ -27,7 +27,7 @@ export async function tgCall<T = any>(method: string, body?: Record<string, unkn
   return (data.result ?? data) as T;
 }
 
-export type TgInlineButton = { text: string; callback_data?: string; url?: string };
+export type TgInlineButton = { text: string; callback_data?: string; url?: string; web_app?: { url: string } };
 
 export async function sendMessage(chatId: number | string, text: string, options?: {
   reply_markup?: { inline_keyboard: TgInlineButton[][] };
