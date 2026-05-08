@@ -1013,6 +1013,20 @@ async function handleCallback(cb: TgCallback) {
     return;
   }
 
+  if (data.startsWith("rejoin:")) {
+    const familyId = data.split(":")[1];
+    const { data: fam } = await db.from("families").select("id, name, telegram_group_id").eq("id", familyId).maybeSingle();
+    if (!fam) { await answerCallbackQuery(cb.id, "Topilmadi"); return; }
+    // Try to lift the Telegram-level ban so admin approval can re-add the user
+    if (fam.telegram_group_id) {
+      try { await unbanChatMember(fam.telegram_group_id, cb.from.id); } catch (e) { console.warn("[bot] unban failed", e); }
+    }
+    await startJoinRequest(cb.from.id, cb.from, fam.id, fam.name);
+    await answerCallbackQuery(cb.id, "So'rov yuborildi");
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    return;
+  }
+
 
   if (data.startsWith("pickfam:")) {
     const familyId = data.split(":")[1];
