@@ -387,6 +387,32 @@ async function handleMessage(msg: TgMessage) {
     return;
   }
 
+  if (text === "/reset" || text === "/logout") {
+    try {
+      // Find all auth users linked to this telegram_id and sign them out globally
+      const { data: profs } = await db.from("profiles").select("user_id").eq("telegram_id", userId);
+      const ids = (profs ?? []).map((p: any) => p.user_id).filter(Boolean);
+      for (const uid of ids) {
+        try { await (db as any).auth.admin.signOut(uid, "global"); } catch (e) { console.warn("[reset] signOut failed", uid, e); }
+      }
+      // Clear bot wizard sessions
+      await db.from("bot_sessions").delete().eq("telegram_id", userId);
+    } catch (e) {
+      console.error("[reset] error", e);
+    }
+    const appUrl = "https://mening-oilam.lovable.app/dashboard?reset=1";
+    await sendMessage(
+      userId,
+      "✅ Sessiya to'liq tozalandi.\n\nEndi pastdagi tugma orqali mini-app'ni qayta oching:",
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: "🔄 Mini-app'ni ochish", web_app: { url: appUrl } }]],
+        },
+      },
+    );
+    return;
+  }
+
   if (text.startsWith("/kim")) {
     await startKinshipFlow(userId);
     return;
