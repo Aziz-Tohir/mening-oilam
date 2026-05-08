@@ -1153,18 +1153,37 @@ async function handleCallback(cb: TgCallback) {
 export async function approveJoinRequest(req: any) {
   const db = getAdminDb();
 
-  // Insert family_member
-  const { data: newMember, error: memErr } = await db.from("family_members").insert({
-    family_id: req.family_id,
-    telegram_id: req.applicant_telegram_id,
-    username: req.applicant_username,
-    full_name: req.applicant_full_name ?? `id${req.applicant_telegram_id}`,
-    status: "active",
-    invited_by: req.relative_member_id,
-    relationship_to_inviter: req.relationship_type,
-  }).select("id").single();
+  // Reuse existing member row if present (re-join after block/leave)
+  const { data: existingMember } = await db.from("family_members")
+    .select("id")
+    .eq("family_id", req.family_id)
+    .eq("telegram_id", req.applicant_telegram_id)
+    .maybeSingle();
 
-  if (memErr) throw memErr;
+  let newMember: { id: string } | null = null;
+  if (existingMember) {
+    const { error: upErr } = await db.from("family_members").update({
+      status: "active",
+      username: req.applicant_username ?? undefined,
+      full_name: req.applicant_full_name ?? undefined,
+      invited_by: req.relative_member_id ?? undefined,
+      relationship_to_inviter: req.relationship_type ?? undefined,
+    } as any).eq("id", (existingMember as any).id);
+    if (upErr) throw upErr;
+    newMember = { id: (existingMember as any).id };
+  } else {
+    const { data: inserted, error: memErr } = await db.from("family_members").insert({
+      family_id: req.family_id,
+      telegram_id: req.applicant_telegram_id,
+      username: req.applicant_username,
+      full_name: req.applicant_full_name ?? `id${req.applicant_telegram_id}`,
+      status: "active",
+      invited_by: req.relative_member_id,
+      relationship_to_inviter: req.relationship_type,
+    }).select("id").single();
+    if (memErr) throw memErr;
+    newMember = inserted;
+  }
 
   // Best-effort: pull Telegram profile photo as default avatar
   try {
