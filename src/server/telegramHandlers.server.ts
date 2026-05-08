@@ -6,6 +6,8 @@ import {
   deleteMessage,
   createChatInviteLink,
   banChatMember,
+  unbanChatMember,
+  getChatMember,
   restrictChatMember,
   unrestrictChatMember,
   getFile,
