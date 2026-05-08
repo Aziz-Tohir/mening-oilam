@@ -6,6 +6,8 @@ import {
   deleteMessage,
   createChatInviteLink,
   banChatMember,
+  unbanChatMember,
+  getChatMember,
   restrictChatMember,
   unrestrictChatMember,
   getFile,
@@ -31,6 +33,8 @@ type TgMessage = {
   left_chat_member?: TgUser;
   reply_markup?: any;
   video?: any; photo?: any; document?: any;
+  via_bot?: TgUser;
+  caption?: string;
 };
 type TgCallback = {
   id: string;
@@ -224,10 +228,52 @@ async function handleMessage(msg: TgMessage) {
 
     if (family) {
       const settings = await getFamilySettings(family.id);
+      const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
+
+      // Begona botlarni faqat adminlar qo'sha olishi
+      if (msg.new_chat_members?.length) {
+        const adderId = msg.from?.id;
+        let adderIsAdmin = false;
+        if (adderId) {
+          try {
+            const cm: any = await getChatMember(msg.chat.id, adderId);
+            const st = cm?.status;
+            adderIsAdmin = st === "creator" || st === "administrator";
+          } catch (e) { console.warn("[bot] getChatMember failed", e); }
+        }
+        for (const u of msg.new_chat_members) {
+          if (!u.is_bot) continue;
+          if ((u.username ?? "").toLowerCase() === myBotUsername) continue;
+          if (adderIsAdmin) continue;
+          try {
+            await banChatMember(msg.chat.id, u.id);
+            const adderMention = msg.from
+              ? (msg.from.username ? `@${msg.from.username}` : `<a href="tg://user?id=${msg.from.id}">${fullName(msg.from)}</a>`)
+              : "A'zo";
+            const sent: any = await sendMessage(
+              msg.chat.id,
+              `🚫 ${adderMention}, faqat adminlar guruhga bot qo'sha oladi. <b>@${u.username ?? u.id}</b> olib tashlandi.`,
+              { parse_mode: "HTML" },
+            );
+            const autoDel = (settings as any)?.welcome_message_auto_delete_seconds ?? 0;
+            if (sent?.message_id && autoDel > 0) {
+              setTimeout(() => { deleteMessage(msg.chat.id, sent.message_id).catch(() => {}); }, autoDel * 1000);
+            }
+            await db.from("action_logs").insert({
+              family_id: family.id,
+              action: "foreign_bot_kicked",
+              actor_telegram_id: adderId ?? null,
+              details: { chat_id: msg.chat.id, bot_username: u.username ?? null, bot_id: u.id },
+            });
+            await postLog(family.id, "moderation", `🚫 Begona bot kick: <b>@${u.username ?? u.id}</b> (qo'shgan: <code>${adderId ?? "?"}</code>)`);
+          } catch (e) {
+            console.warn("[bot] failed to ban foreign bot", u.id, e);
+          }
+        }
+      }
 
       // Mute non-onboarded new members (joined directly without bot flow)
       if (msg.new_chat_members?.length && (settings as any)?.enforce_bot_onboarding !== false) {
-        const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
         for (const u of msg.new_chat_members) {
           if (u.is_bot) continue;
           if ((u.username ?? "").toLowerCase() === myBotUsername) continue;
@@ -267,15 +313,38 @@ async function handleMessage(msg: TgMessage) {
         }
       }
 
+      // Foydalanuvchi guruhdan o'zi chiqib ketdi — family_member statusini "pending" qilamiz
+      if (msg.left_chat_member && msg.from?.id === msg.left_chat_member.id && !msg.left_chat_member.is_bot) {
+        try {
+          const leftId = msg.left_chat_member.id;
+          const { data: fm } = await db.from("family_members")
+            .select("id, status")
+            .eq("family_id", family.id)
+            .eq("telegram_id", leftId)
+            .maybeSingle();
+          if (fm && (fm as any).status === "active") {
+            await db.from("family_members").update({ status: "pending" } as any).eq("id", (fm as any).id);
+            await postLog(family.id, "moderation", `👋 A'zo guruhdan chiqdi: <code>${leftId}</code>`);
+            try {
+              await sendMessage(leftId, "Siz oila guruhidan chiqib ketdingiz. Qaytib qo'shilish uchun botga /start bosing.");
+            } catch {}
+          }
+        } catch (e) { console.warn("[bot] left handler failed", e); }
+      }
+
       if ((msg.new_chat_members?.length || msg.left_chat_member) && settings?.delete_join_leave_messages !== false) {
         await deleteMessage(msg.chat.id, msg.message_id);
         return;
       }
 
-      // Foreign bots: handle media via repost (with caption tag) or just delete
-      const myBotUsername = (process.env.BOT_USERNAME ?? "").replace(/^@/, "").toLowerCase();
+      // Foreign bots: handle media via repost (with caption tag) or just delete.
+      // Also catches messages sent via inline bots (via_bot) — common for media-search bots.
       const fromUser: any = (msg as any).from;
-      if (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) {
+      const viaBot: any = (msg as any).via_bot;
+      const isForeignBotMsg =
+        (fromUser?.is_bot && (fromUser.username ?? "").toLowerCase() !== myBotUsername) ||
+        (viaBot?.username && viaBot.username.toLowerCase() !== myBotUsername);
+      if (isForeignBotMsg) {
         await handleForeignBotMessage(msg, family.id, !!(settings as any)?.manage_foreign_bot_media);
         return;
       }
@@ -568,17 +637,21 @@ async function sendStartFlow(userId: number, from: TgUser) {
   const db = getAdminDb();
   const lang = await getUserLang(db, userId);
 
-  // 1. Mavjud a'zo (telegram_id bo'yicha)
-  const { data: existingMemberships } = await db
+  // 1. Mavjud a'zo (telegram_id bo'yicha) — barcha statuslar
+  const { data: allMemberships } = await db
     .from("family_members")
-    .select("family_id, families:family_id(id, name)")
-    .eq("telegram_id", userId)
-    .eq("status", "active");
+    .select("id, status, family_id, families:family_id(id, name)")
+    .eq("telegram_id", userId);
 
-  let memberships: any[] = existingMemberships ?? [];
+  const rows: any[] = allMemberships ?? [];
+  const activeRows = rows.filter((r) => r.status === "active");
+  const blockedRows = rows.filter((r) => r.status === "blocked");
+  const pendingRows = rows.filter((r) => r.status === "pending");
+
+  let memberships: any[] = activeRows;
 
   // 1b. Owner/admin ro'lini ham tekshir — web orqali oila yaratganlar uchun
-  if (memberships.length === 0) {
+  if (memberships.length === 0 && blockedRows.length === 0 && pendingRows.length === 0) {
     const { data: profByTg } = await db.from("profiles").select("user_id").eq("telegram_id", userId).maybeSingle();
     const profileUserId = (profByTg as any)?.user_id as string | undefined;
     if (profileUserId) {
@@ -623,6 +696,38 @@ async function sendStartFlow(userId: number, from: TgUser) {
   if (memberships.length > 0) {
     const names = memberships.map((m: any) => m.families?.name).filter(Boolean).join(", ");
     await sendMessage(userId, t("already_member", lang, { names: names || "oila" }));
+    return;
+  }
+
+  if (blockedRows.length > 0) {
+    const r = blockedRows[0];
+    const famName = r.families?.name ?? "oila";
+    await sendMessage(
+      userId,
+      `🚫 Siz <b>${famName}</b> guruhidan chiqarilgansiz. Qaytib qo'shilish uchun admin tasdiqi kerak.`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [[{ text: "🔁 Qayta so'rov yuborish", callback_data: `rejoin:${r.family_id}` }]],
+        },
+      },
+    );
+    return;
+  }
+
+  if (pendingRows.length > 0) {
+    const r = pendingRows[0];
+    const famName = r.families?.name ?? "oila";
+    await sendMessage(
+      userId,
+      `⏳ <b>${famName}</b> oilasiga so'rovingiz ko'rib chiqilmoqda yoki guruhdan chiqib ketgansiz.`,
+      {
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [[{ text: "🔁 Qayta qo'shilish", callback_data: `rejoin:${r.family_id}` }]],
+        },
+      },
+    );
     return;
   }
 
@@ -908,6 +1013,20 @@ async function handleCallback(cb: TgCallback) {
     return;
   }
 
+  if (data.startsWith("rejoin:")) {
+    const familyId = data.split(":")[1];
+    const { data: fam } = await db.from("families").select("id, name, telegram_group_id").eq("id", familyId).maybeSingle();
+    if (!fam) { await answerCallbackQuery(cb.id, "Topilmadi"); return; }
+    // Try to lift the Telegram-level ban so admin approval can re-add the user
+    if (fam.telegram_group_id) {
+      try { await unbanChatMember(fam.telegram_group_id, cb.from.id); } catch (e) { console.warn("[bot] unban failed", e); }
+    }
+    await startJoinRequest(cb.from.id, cb.from, fam.id, fam.name);
+    await answerCallbackQuery(cb.id, "So'rov yuborildi");
+    if (cb.message) await deleteMessage(cb.message.chat.id, cb.message.message_id);
+    return;
+  }
+
 
   if (data.startsWith("pickfam:")) {
     const familyId = data.split(":")[1];
@@ -1034,18 +1153,37 @@ async function handleCallback(cb: TgCallback) {
 export async function approveJoinRequest(req: any) {
   const db = getAdminDb();
 
-  // Insert family_member
-  const { data: newMember, error: memErr } = await db.from("family_members").insert({
-    family_id: req.family_id,
-    telegram_id: req.applicant_telegram_id,
-    username: req.applicant_username,
-    full_name: req.applicant_full_name ?? `id${req.applicant_telegram_id}`,
-    status: "active",
-    invited_by: req.relative_member_id,
-    relationship_to_inviter: req.relationship_type,
-  }).select("id").single();
+  // Reuse existing member row if present (re-join after block/leave)
+  const { data: existingMember } = await db.from("family_members")
+    .select("id")
+    .eq("family_id", req.family_id)
+    .eq("telegram_id", req.applicant_telegram_id)
+    .maybeSingle();
 
-  if (memErr) throw memErr;
+  let newMember: { id: string } | null = null;
+  if (existingMember) {
+    const { error: upErr } = await db.from("family_members").update({
+      status: "active",
+      username: req.applicant_username ?? undefined,
+      full_name: req.applicant_full_name ?? undefined,
+      invited_by: req.relative_member_id ?? undefined,
+      relationship_to_inviter: req.relationship_type ?? undefined,
+    } as any).eq("id", (existingMember as any).id);
+    if (upErr) throw upErr;
+    newMember = { id: (existingMember as any).id };
+  } else {
+    const { data: inserted, error: memErr } = await db.from("family_members").insert({
+      family_id: req.family_id,
+      telegram_id: req.applicant_telegram_id,
+      username: req.applicant_username,
+      full_name: req.applicant_full_name ?? `id${req.applicant_telegram_id}`,
+      status: "active",
+      invited_by: req.relative_member_id,
+      relationship_to_inviter: req.relationship_type,
+    }).select("id").single();
+    if (memErr) throw memErr;
+    newMember = inserted;
+  }
 
   // Best-effort: pull Telegram profile photo as default avatar
   try {
@@ -1076,6 +1214,7 @@ export async function approveJoinRequest(req: any) {
   if (family?.telegram_group_id) {
     // If user is already in the group (joined directly and was muted), unmute them
     try {
+      try { await unbanChatMember(family.telegram_group_id, req.applicant_telegram_id); } catch (e) { console.warn("[bot] unban on approve failed", e); }
       await unrestrictChatMember(family.telegram_group_id, req.applicant_telegram_id);
     } catch (e) {
       console.warn("[bot] unrestrict failed (user may not be in group yet)", e);

@@ -89,6 +89,11 @@ export async function moderateGroupMessage(msg: Msg, family: { id: string; teleg
           else if (act === "mute") await restrictChatMember(msg.chat.id, userId, Math.floor(Date.now()/1000) + 3600);
           else await banChatMember(msg.chat.id, userId);
         } catch (e) { console.warn("[mod] action failed", e); }
+        if (act === "ban" || act === "kick") {
+          try {
+            await db.from("family_members").update({ status: "blocked" } as any).eq("id", memberId);
+          } catch (e) { console.warn("[mod] status update failed", e); }
+        }
         await sendMessage(msg.chat.id, `🚫 ${mention} ${max} ta ogohlantirish oldi va guruhdan chiqarildi.`, { parse_mode: "HTML" });
       } else {
         await sendMessage(msg.chat.id, `⚠️ ${mention}, ${violation}. (${total}/${max})`, { parse_mode: "HTML" });
