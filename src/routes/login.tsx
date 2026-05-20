@@ -65,6 +65,7 @@ function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <Link to="/" className="text-sm text-muted-foreground hover:underline">← Bosh sahifa</Link>
+          <h1 className="sr-only">Kirish — Shajara Admin</h1>
           <CardTitle className="mt-2 text-2xl">🌳 Shajara — Admin panel</CardTitle>
         </CardHeader>
         <CardContent>
@@ -75,15 +76,15 @@ function LoginPage() {
             </TabsList>
             <TabsContent value="signin">
               <form onSubmit={handleSignIn} className="space-y-3 pt-3">
-                <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                <div><Label>Parol</Label><Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+                <div><Label htmlFor="signin-email">Email</Label><Input id="signin-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+                <div><Label htmlFor="signin-password">Parol</Label><Input id="signin-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                 <Button type="submit" className="w-full" disabled={loading}>Kirish</Button>
               </form>
             </TabsContent>
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-3 pt-3">
-                <div><Label>Email</Label><Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-                <div><Label>Parol (min 6)</Label><Input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+                <div><Label htmlFor="signup-email">Email</Label><Input id="signup-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+                <div><Label htmlFor="signup-password">Parol (min 6)</Label><Input id="signup-password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
                 <Button type="submit" className="w-full" disabled={loading}>Ro'yxatdan o'tish</Button>
               </form>
             </TabsContent>
