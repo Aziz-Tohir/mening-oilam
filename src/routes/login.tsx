@@ -10,7 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Kirish — Shajara" }] }),
+  head: () => ({
+    meta: [
+      { title: "Kirish — Shajara Admin" },
+      { name: "description", content: "Shajara admin paneliga kiring yoki ro'yxatdan o'ting va oilaviy guruhingizni Telegram orqali boshqaring." },
+      { property: "og:title", content: "Kirish — Shajara Admin" },
+      { property: "og:description", content: "Shajara admin paneliga kirish va ro'yxatdan o'tish sahifasi." },
+      { property: "og:url", content: "https://mening-oilam.lovable.app/login" },
+      { name: "robots", content: "noindex,follow" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://mening-oilam.lovable.app/login" },
+    ],
+  }),
   component: LoginPage,
 });
 
