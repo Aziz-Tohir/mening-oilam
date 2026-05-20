@@ -8,6 +8,34 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Oilaviy aloqalarni mustahkamlovchi Telegram bot va admin panel: shajara, xavfsiz onboarding, guruh moderatsiyasi." },
       { property: "og:title", content: "Shajara — Oilaviy hub" },
       { property: "og:description", content: "Telegram orqali oilaviy guruhni boshqaring va shajarani saqlang." },
+      { property: "og:url", content: "https://mening-oilam.lovable.app/" },
+      { property: "og:type", content: "website" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://mening-oilam.lovable.app/" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          name: "Shajara",
+          description: "Oilaviy aloqalarni mustahkamlovchi Telegram bot va admin panel.",
+          applicationCategory: "SocialNetworkingApplication",
+          operatingSystem: "Web, Telegram",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Shajara",
+          url: "https://mening-oilam.lovable.app/",
+        }),
+      },
     ],
   }),
   component: Index,
@@ -47,7 +75,9 @@ function Index() {
           </div>
         </section>
 
-        <section id="features" className="mt-16 grid gap-4 sm:mt-24 sm:gap-6 md:grid-cols-3">
+        <section id="features" className="mt-16 sm:mt-24">
+          <h2 className="sr-only">Imkoniyatlar</h2>
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
           {[
             { icon: "🔐", title: "Xavfsiz onboarding", desc: "Yangi a'zo qarindoshi va admin tasdig'idan keyingina guruhga qo'shiladi." },
             { icon: "🌳", title: "Oila shajarasi", desc: "Har bir a'zo va ular orasidagi qarindoshlik aloqalari saqlanadi." },
@@ -62,6 +92,7 @@ function Index() {
               <p className="mt-2 text-sm text-muted-foreground">{f.desc}</p>
             </div>
           ))}
+          </div>
         </section>
       </main>
 

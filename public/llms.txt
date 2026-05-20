@@ -1,0 +1,11 @@
+# Shajara
+
+> Oilaviy aloqalarni mustahkamlovchi Telegram bot va admin panel: shajara, xavfsiz onboarding, guruh moderatsiyasi.
+
+Shajara — yopiq oilaviy guruhlar uchun yaratilgan boshqaruv va shajara tizimi.
+Telegram orqali yangi a'zolarni qabul qilish, qarindoshlik aloqalarini saqlash va
+guruhdagi xabarlarni avtomatik moderatsiya qilish imkonini beradi.
+
+## Pages
+
+- [Bosh sahifa](/): Mahsulot tavsifi va imkoniyatlar ro'yxati.
