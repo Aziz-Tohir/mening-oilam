@@ -5,6 +5,7 @@ using MeningOilam.Domain.Entities;
 using MeningOilam.Domain.Enums;
 using MeningOilam.Infrastructure.Caching;
 using MeningOilam.Infrastructure.Data;
+using MeningOilam.Infrastructure.Media;
 using Microsoft.EntityFrameworkCore;
 
 namespace MeningOilam.Infrastructure.Bot;
@@ -72,8 +73,11 @@ public class ModerationService(AppDbContext db, BotCache cache, ITelegramService
         // Anti-link
         if (settings.AntiLink && !string.IsNullOrEmpty(searchText) && LinkRegex.IsMatch(searchText))
         {
-            var allowed = settings.AllowedLinkDomains.Any(d => searchText.Contains(d, StringComparison.OrdinalIgnoreCase));
-            if (!allowed)
+            var domainAllowed = settings.AllowedLinkDomains.Any(d => searchText.Contains(d, StringComparison.OrdinalIgnoreCase));
+            // Clean-video relay is on and this is a supported video link → it's handled, not spam.
+            // Don't delete it here; the download pipeline (and VideoDownloadDeleteOriginal) takes over.
+            var videoHandled = settings.AutoVideoDownload && VideoLinkDetector.FirstSupportedUrl(searchText) is not null;
+            if (!domainAllowed && !videoHandled)
             {
                 await tg.DeleteMessageAsync(chatId, messageId, ct);
                 return await WarnAsync(familyId, chatId, userId, "Havolalar taqiqlangan", settings, ct);
