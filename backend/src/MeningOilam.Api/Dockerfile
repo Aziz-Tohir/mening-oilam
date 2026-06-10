@@ -3,7 +3,8 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Restore (layer-cached until .csproj files change)
-COPY MeningOilam.sln ./
+# Directory.Build.props holds the shared TargetFramework — must be present for restore.
+COPY MeningOilam.sln Directory.Build.props ./
 COPY src/MeningOilam.Domain/MeningOilam.Domain.csproj             src/MeningOilam.Domain/
 COPY src/MeningOilam.Application/MeningOilam.Application.csproj   src/MeningOilam.Application/
 COPY src/MeningOilam.Infrastructure/MeningOilam.Infrastructure.csproj src/MeningOilam.Infrastructure/
