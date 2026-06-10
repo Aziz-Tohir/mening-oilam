@@ -28,6 +28,16 @@ public class PollingService(
         }
 
         log.LogInformation("Telegram polling started");
+
+        // Polling and webhook are mutually exclusive — getUpdates returns 409 while a
+        // webhook is active. Drop any stale webhook (e.g. from a previous deploy) first.
+        using (var initScope = scopeFactory.CreateScope())
+        {
+            var initClient = initScope.ServiceProvider.GetRequiredService<TelegramClient>();
+            await initClient.CallAsync("deleteWebhook", new { drop_pending_updates = false }, stoppingToken);
+            log.LogInformation("Cleared any active webhook before polling");
+        }
+
         long offset = await LoadOffsetAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
