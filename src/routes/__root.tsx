@@ -53,6 +53,10 @@ export const Route = createRootRoute({
         href: appCss,
       },
     ],
+    // Telegram Mini App SDK — har sahifada mavjud bo'lsin (initData orqali avto-login uchun).
+    scripts: [
+      { src: "https://telegram.org/js/telegram-web-app.js" },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

@@ -158,6 +158,7 @@ services:
       Telegram__BotToken: "$TG_TOKEN"
       Telegram__BotUsername: "$TG_USERNAME"
       Telegram__Mode: "polling"
+      Telegram__MiniAppUrl: "https://$DOMAIN/dashboard"
       Cron__Secret: "$CRON_SECRET"
       Cobalt__BaseUrl: $COBALT_ENV_BASE
       Cors__AllowedOrigins__0: "https://$DOMAIN"

@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -42,6 +43,16 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const navigate = useNavigate();
+
+  // Telegram Mini App ichida ochilsa — to'g'ridan-to'g'ri dashboardga (u yerda initData orqali
+  // avtomatik login bo'ladi), landing sahifa va parolli login ko'rsatilmaydi.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.initData) navigate({ to: "/dashboard" });
+  }, [navigate]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <header className="border-b border-border/40">
