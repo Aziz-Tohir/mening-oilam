@@ -79,9 +79,10 @@ if ! command -v docker >/dev/null; then
 fi
 docker compose version >/dev/null 2>&1 || apt-get install -y -qq docker-compose-plugin
 
-if ! command -v node >/dev/null || [ "$(node -v | cut -d. -f1 | tr -d v)" -lt 20 ]; then
-  log "Node.js 20 o'rnatilmoqda..."
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+# TanStack Start Node >=22.12 talab qiladi
+if ! command -v node >/dev/null || [ "$(node -v | cut -d. -f1 | tr -d v)" -lt 22 ]; then
+  log "Node.js 22 o'rnatilmoqda..."
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y -qq nodejs
 fi
 
@@ -182,7 +183,8 @@ ok "Konteynerlar ishga tushdi (migration startup'da avtomatik qo'llanadi)."
 # ---------------------------------------------------------------------------
 log "Frontend qurilmoqda (VITE_API_URL=https://$DOMAIN)..."
 cd "$REPO"
-npm ci
+# npm ci qat'iy (lock sinxron bo'lishini talab qiladi); drift bo'lsa npm install'ga o'tamiz.
+npm ci --no-audit --no-fund || { log "lock fayl sinxron emas — npm install bilan davom etiladi"; npm install --no-audit --no-fund; }
 VITE_API_URL="https://$DOMAIN" npm run build
 
 FRONT_DIR=""
