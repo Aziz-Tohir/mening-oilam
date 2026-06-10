@@ -6,4 +6,8 @@
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-export default defineConfig();
+// SPA rejimi: statik shell (index.html) prerender qilinadi, client-side hydrate bo'ladi.
+// Bu API-asosidagi ilova uchun mos — Node SSR server kerak emas, nginx statik beradi.
+export default defineConfig({
+  tanstackStart: { spa: { enabled: true } },
+});

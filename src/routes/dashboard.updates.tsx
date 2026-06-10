@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
-import { listTelegramUpdates } from "@/server/debug.functions";
+import { listTelegramUpdates } from "@/services/debug.functions";
 
 export const Route = createFileRoute("/dashboard/updates")({
   component: UpdatesPage,

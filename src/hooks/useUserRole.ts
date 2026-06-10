@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { getMyRole } from "@/server/role.functions";
+import { getMyRole } from "@/services/role.functions";
 
 export type AppRole = "superadmin" | "admin" | "moderator" | "member";
 

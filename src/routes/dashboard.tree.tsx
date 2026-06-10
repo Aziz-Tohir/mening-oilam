@@ -15,9 +15,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { listMyFamilies } from "@/server/families.functions";
-import { listMembers, listRelationships, addRelationship } from "@/server/admin.functions";
-import { exportFamilyTreeJson } from "@/server/tree.functions";
+import { listMyFamilies } from "@/services/families.functions";
+import { listMembers, listRelationships, addRelationship } from "@/services/admin.functions";
+import { exportFamilyTreeJson } from "@/services/tree.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";

@@ -9,13 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { listMyFamilies } from "@/server/families.functions";
-import { listMembers, getSettings, updateSettings } from "@/server/admin.functions";
+import { listMyFamilies } from "@/services/families.functions";
+import { listMembers, getSettings, updateSettings } from "@/services/admin.functions";
 import {
   listBannedWords, addBannedWord, deleteBannedWord,
   listWarnings, addWarning, clearWarnings,
   moderateMember, sendBroadcast, listBroadcasts,
-} from "@/server/bot.functions";
+} from "@/services/bot.functions";
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 import { toast } from "sonner";

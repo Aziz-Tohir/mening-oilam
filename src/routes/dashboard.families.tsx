@@ -13,7 +13,7 @@ import {
   updateFamily,
   deleteFamily,
   transferFamilyOwnership,
-} from "@/server/superadmin.functions";
+} from "@/services/superadmin.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/families")({

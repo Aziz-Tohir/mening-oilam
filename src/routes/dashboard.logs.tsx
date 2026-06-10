@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { listMyFamilies } from "@/server/families.functions";
-import { listLogs } from "@/server/admin.functions";
+import { listMyFamilies } from "@/services/families.functions";
+import { listLogs } from "@/services/admin.functions";
 import { useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
 

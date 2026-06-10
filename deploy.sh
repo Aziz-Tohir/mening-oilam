@@ -188,10 +188,16 @@ npm ci --no-audit --no-fund || { log "lock fayl sinxron emas — npm install bil
 VITE_API_URL="https://$DOMAIN" npm run build
 
 FRONT_DIR=""
-for d in dist dist/client .output/public build; do
-  [ -f "$REPO/$d/index.html" ] && { FRONT_DIR="$REPO/$d"; break; }
+for d in dist/client dist .output/public build; do
+  if [ -f "$REPO/$d/_shell.html" ] || [ -f "$REPO/$d/index.html" ]; then
+    FRONT_DIR="$REPO/$d"; break
+  fi
 done
-[ -n "$FRONT_DIR" ] || die "Build chiqishi topilmadi (index.html). 'npm run build' loglarini tekshiring."
+[ -n "$FRONT_DIR" ] || die "Build chiqishi topilmadi (index.html/_shell.html). 'npm run build' loglarini tekshiring."
+# TanStack Start SPA rejimi shell'ni _shell.html qilib chiqaradi — uni index.html sifatida ishlatamiz.
+if [ ! -f "$FRONT_DIR/index.html" ] && [ -f "$FRONT_DIR/_shell.html" ]; then
+  cp "$FRONT_DIR/_shell.html" "$FRONT_DIR/index.html"
+fi
 ok "Frontend tayyor: $FRONT_DIR"
 
 # ---------------------------------------------------------------------------
