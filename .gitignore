@@ -29,6 +29,7 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
+!backend/MeningOilam.sln
 *.sw?
 
 # Deploy secrets
