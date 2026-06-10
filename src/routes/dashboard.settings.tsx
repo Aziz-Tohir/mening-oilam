@@ -121,6 +121,26 @@ function SettingsPage() {
         </Card>
 
         <Card>
+          <CardHeader><CardTitle>Toza video yuklash</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Guruhga YouTube, Instagram, TikTok va boshqa havolalar tashlanganda, bot videoni
+              reklamasiz/yozuvsiz <b>toza holatda</b> yuklab, asl xabarga javob qilib qaytaradi.
+              (Server tomonida cobalt sozlangan bo'lishi kerak.)
+            </p>
+            <Row label="Havoladan videoni avtomatik yuklash">
+              <Switch checked={!!(settings as any).auto_video_download}
+                onCheckedChange={(v) => save({ auto_video_download: v } as any)} />
+            </Row>
+            <Row label="Toza video qaytgach, asl havola xabarini o'chirish">
+              <Switch checked={!!(settings as any).video_download_delete_original}
+                disabled={!(settings as any).auto_video_download}
+                onCheckedChange={(v) => save({ video_download_delete_original: v } as any)} />
+            </Row>
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle>Taklif havolasi</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {inviteLink ? (

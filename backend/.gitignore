@@ -1,0 +1,20 @@
+# Local Postgres data dir (test/dev)
+.pgtmp/
+
+# .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+
+# Rider / Visual Studio
+.vs/
+.idea/
+*.suo
+
+# Local secrets / env overrides (never commit real secrets)
+appsettings.Production.json
+appsettings.*.Local.json
+*.env
+.env

@@ -1,0 +1,18 @@
+{
+  "welcome": "👋 Oilamizga xush kelibsiz! Men — Shajara botiman.",
+  "help_cmd": "Yordam uchun /help yuboring.",
+  "choose_lang": "Iltimos, qulay tilingizni tanlang:",
+  "lang_set": "✅ Til o'rnatildi.",
+  "start_choose_action": "Nima qilmoqchisiz?",
+  "btn_create_family": "🏠 Yangi oila yaratish",
+  "btn_join_family": "👥 Mavjud oilaga qo'shilish",
+  "create_ask_name": "Yangi oilaga ism bering. Masalan: <b>Aliyevlar oilasi</b>",
+  "create_done": "🎉 Tabriklaymiz! «{name}» oilasi yaratildi.\n\nEndi keyingi qadam — Telegram guruhini yarating va botni u yerga admin sifatida qo'shing.",
+  "create_group_steps": "📋 <b>Ko'rsatma:</b>\n1. Telegram'da yangi guruh yarating.\n2. Botni guruhga qo'shing va admin qiling.\n3. Tayyor — guruh avtomatik bog'lanadi!\n\nQuyidagi tugmani bosib botni guruhga qo'shing:",
+  "btn_add_to_group": "➕ Guruhga qo'shish",
+  "btn_open_app": "📱 Mini App'ni ochish",
+  "already_member": "✅ Siz allaqachon {names} a'zosisiz.",
+  "no_families": "Hozircha hech qanday oila ulanmagan. Iltimos, oila admini bilan bog'laning.",
+  "deep_link_invalid": "❌ Taklif kodi noto'g'ri yoki muddati tugagan.",
+  "foreign_media_caption": "📸 {name} oilamiz bilan ulashdi"
+}

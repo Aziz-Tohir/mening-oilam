@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { getMyMemberships, updateMyProfile, importTelegramPhoto } from "@/server/profile.functions";
 import { setSentimentOptOut } from "@/server/sentiment.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadAvatar } from "@/lib/api";
 
 import { callServer, useCachedServer, invalidateCache } from "@/lib/serverCall";
 import { CacheStatus } from "@/components/CacheStatus";
@@ -104,29 +104,21 @@ function ProfilePage() {
     if (file.size > 15 * 1024 * 1024) { toast.error("Rasm 15MB dan kichik bo'lishi kerak"); return; }
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Tizimga kiring");
-
       let blob: Blob = file;
       let ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      let contentType = file.type;
       let sizeNote = "";
       try {
         const processed = await processImageForUpload(file);
         blob = processed.blob;
         ext = processed.ext;
-        contentType = processed.contentType;
         sizeNote = ` (${formatBytes(file.size)} → ${formatBytes(processed.blob.size)})`;
       } catch (convErr) {
         // Fallback: original file
         console.warn("Image conversion failed, uploading original", convErr);
       }
 
-      const key = `${user.id}/${m.id}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(key, blob, { upsert: true, contentType });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(key);
-      setForm((f) => ({ ...f, photo_url: pub.publicUrl }));
+      const { url } = await uploadAvatar(blob, `avatar.${ext}`);
+      setForm((f) => ({ ...f, photo_url: url }));
       toast.success(`Rasm yuklandi${sizeNote}. Saqlash tugmasini bosing.`);
     } catch (e: any) {
       toast.error(e?.message ?? "Yuklab bo'lmadi");

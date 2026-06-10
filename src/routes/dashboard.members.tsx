@@ -16,7 +16,7 @@ import { CacheStatus } from "@/components/CacheStatus";
 import { relationshipLabel, RELATIONSHIP_OPTIONS } from "@/lib/relationships";
 import { useUserRole } from "@/hooks/useUserRole";
 import { processImageForUpload, formatBytes } from "@/utils/imageProcess";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadAvatar } from "@/lib/api";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard/members")({
@@ -266,13 +266,8 @@ function EditMemberDialog({ member, familyId, onClose, onSaved }: { member: Memb
     setConfirming(true);
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Tizimga kiring");
-      const key = `${user.id}/admin-${member.id}-${Date.now()}.${pending.ext}`;
-      const { error: upErr } = await supabase.storage.from("avatars").upload(key, pending.blob, { upsert: true, contentType: pending.contentType });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(key);
-      setForm((f) => ({ ...f, photo_url: pub.publicUrl }));
+      const { url } = await uploadAvatar(pending.blob, `avatar.${pending.ext}`);
+      setForm((f) => ({ ...f, photo_url: url }));
       toast.success(`Rasm yuklandi (${formatBytes(pending.originalSize)} → ${formatBytes(pending.processedSize)})`);
       clearPending();
     } catch (e: any) {

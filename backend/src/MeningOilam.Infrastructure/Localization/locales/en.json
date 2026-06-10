@@ -1,0 +1,18 @@
+{
+  "welcome": "👋 Welcome to our family! I'm the Shajara bot.",
+  "help_cmd": "Send /help for help.",
+  "choose_lang": "Please choose your preferred language:",
+  "lang_set": "✅ Language set.",
+  "start_choose_action": "What would you like to do?",
+  "btn_create_family": "🏠 Create a new family",
+  "btn_join_family": "👥 Join an existing family",
+  "create_ask_name": "Give your new family a name. For example: <b>The Aliyev Family</b>",
+  "create_done": "🎉 Congratulations! Family «{name}» has been created.\n\nNext step — create a Telegram group and add the bot as administrator.",
+  "create_group_steps": "📋 <b>Steps:</b>\n1. Create a new Telegram group.\n2. Add the bot to the group and make it admin.\n3. Done — the group will connect automatically!\n\nTap the button below to add the bot to a group:",
+  "btn_add_to_group": "➕ Add to group",
+  "btn_open_app": "📱 Open Mini App",
+  "already_member": "✅ You are already a member of {names}.",
+  "no_families": "No families connected yet. Please contact the family admin.",
+  "deep_link_invalid": "❌ Invalid or expired invite code.",
+  "foreign_media_caption": "📸 {name} shared with our family"
+}

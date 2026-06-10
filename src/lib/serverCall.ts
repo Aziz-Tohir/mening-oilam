@@ -1,23 +1,10 @@
-// Wrapper for calling server functions with user's auth bearer token.
-// Includes a lightweight stale-while-revalidate cache (memory + sessionStorage)
-// so repeat reads paint instantly while fresh data loads in the background.
+// Thin wrapper kept for backward compatibility with existing pages.
+// Server functions are now plain async REST callers (see src/server/*.functions.ts).
+// callServer(fn, payload) simply invokes fn(payload). The SWR cache below is unchanged.
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
-export async function callServer<T>(fn: (input: any) => Promise<T>, payload?: any): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  const origFetch = globalThis.fetch;
-  globalThis.fetch = ((input: RequestInfo | URL, init: RequestInit = {}) => {
-    const headers = new Headers(init.headers);
-    if (token && !headers.has("authorization")) headers.set("authorization", `Bearer ${token}`);
-    return origFetch(input, { ...init, headers });
-  }) as typeof fetch;
-  try {
-    return await fn(payload === undefined ? undefined : { data: payload });
-  } finally {
-    globalThis.fetch = origFetch;
-  }
+export async function callServer<T>(fn: (payload?: any) => Promise<T>, payload?: any): Promise<T> {
+  return fn(payload);
 }
 
 // ---------- SWR cache ----------
@@ -45,16 +32,9 @@ export function invalidateCache(prefix?: string) {
   } catch {}
 }
 
-/**
- * useCachedServer — paints cached data immediately, refetches in the background.
- * @param key  unique cache key (include params, e.g. `events:${familyId}`)
- * @param fn   server function
- * @param payload  payload to pass
- * @param opts.staleMs  if cached data is fresher than this, skip network (default 30 min)
- */
 export function useCachedServer<T>(
   key: string,
-  fn: (input: any) => Promise<T>,
+  fn: (payload?: any) => Promise<T>,
   payload?: any,
   opts: { staleMs?: number; enabled?: boolean } = {},
 ) {
@@ -69,9 +49,7 @@ export function useCachedServer<T>(
   const [data, setData] = useState<T | null>(initial?.data ?? null);
   const [ts, setTs] = useState<number | null>(initial?.ts ?? null);
   const [loading, setLoading] = useState<boolean>(!initial);
-  const [stale, setStale] = useState<boolean>(
-    initial ? Date.now() - initial.ts >= staleMs : false,
-  );
+  const [stale, setStale] = useState<boolean>(initial ? Date.now() - initial.ts >= staleMs : false);
   const [error, setError] = useState<Error | null>(null);
   const reqRef = useRef(0);
 
@@ -79,29 +57,22 @@ export function useCachedServer<T>(
     if (!enabled) return;
     const cached = memCache.get(key);
     if (!force && cached && Date.now() - cached.ts < staleMs) {
-      setData(cached.data);
-      setTs(cached.ts);
-      setStale(false);
-      setLoading(false);
+      setData(cached.data); setTs(cached.ts); setStale(false); setLoading(false);
       return cached.data;
     }
     if (cached) setStale(true);
     const myReq = ++reqRef.current;
     try {
-      const res = await callServer(fn, payload);
+      const res = await fn(payload);
       if (myReq !== reqRef.current) return res;
       const entry = { data: res, ts: Date.now() };
       memCache.set(key, entry);
       writeStore(key, entry);
-      setData(res);
-      setTs(entry.ts);
-      setStale(false);
-      setError(null);
+      setData(res); setTs(entry.ts); setStale(false); setError(null);
       return res;
     } catch (e: any) {
       if (myReq !== reqRef.current) throw e;
-      setError(e);
-      throw e;
+      setError(e); throw e;
     } finally {
       if (myReq === reqRef.current) setLoading(false);
     }

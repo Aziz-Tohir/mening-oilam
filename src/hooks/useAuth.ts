@@ -1,25 +1,52 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Session, User } from "@supabase/supabase-js";
+import { useCallback, useEffect, useState } from "react";
+import { clearTokens, isAuthenticated, logout, me, onAuthChange } from "@/lib/api";
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  display_name?: string | null;
+  telegram_id?: number | null;
+  role?: string | null;
+  family_id?: string | null;
+}
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+  const loadUser = useCallback(async () => {
+    if (!isAuthenticated()) {
+      setUser(null);
       setLoading(false);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
+      return;
+    }
+    try {
+      const data: any = await me();
+      setUser({
+        id: data.user_id,
+        email: data.email,
+        display_name: data.display_name,
+        telegram_id: data.telegram_id,
+        role: data.role,
+        family_id: data.family_id,
+      });
+    } catch {
+      setUser(null);
+    } finally {
       setLoading(false);
-    });
-    return () => subscription.unsubscribe();
+    }
   }, []);
 
-  return { session, user, loading, signOut: () => supabase.auth.signOut() };
+  useEffect(() => {
+    loadUser();
+    const unsub = onAuthChange(() => { loadUser(); });
+    return () => unsub();
+  }, [loadUser]);
+
+  const signOut = useCallback(async () => {
+    try { await logout(); } catch { clearTokens(); }
+    setUser(null);
+  }, []);
+
+  return { user, loading, signOut };
 }

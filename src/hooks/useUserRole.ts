@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { callServer } from "@/lib/serverCall";
 import { getMyRole } from "@/server/role.functions";
 
 export type AppRole = "superadmin" | "admin" | "moderator" | "member";
@@ -20,15 +19,12 @@ export function useUserRole() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await callServer(getMyRole);
+        const res = await getMyRole();
         if (cancelled) return;
         setRole((res?.role as AppRole) ?? "member");
         setFamilyId(res?.familyId ?? null);
       } catch {
-        if (!cancelled) {
-          setRole("member");
-          setFamilyId(null);
-        }
+        if (!cancelled) { setRole("member"); setFamilyId(null); }
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { clearTokens, isAuthenticated, miniAppAuth, miniAppRegister } from "@/lib/api";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({
@@ -24,7 +24,7 @@ function DashboardLayout() {
   const [inviteCode, setInviteCode] = useState("");
   const [inviting, setInviting] = useState(false);
 
-  // Lazy-load Telegram WebApp script (only on dashboard, not on landing)
+  // Lazy-load Telegram WebApp script
   useEffect(() => {
     if (typeof window === "undefined") return;
     if ((window as any).Telegram?.WebApp) { setTgReady(true); return; }
@@ -37,55 +37,37 @@ function DashboardLayout() {
     document.head.appendChild(s);
   }, []);
 
-  // Full reset flow: ?reset=1 in URL OR Telegram start_param=reset
-  // Clears localStorage, sessionStorage, Supabase session, then reloads clean.
+  // Reset flow: ?reset=1 or Telegram start_param=reset
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     const hasReset = url.searchParams.get("reset") === "1";
     const tg = (window as any).Telegram?.WebApp;
-    const startParam = tg?.initDataUnsafe?.start_param;
-    if (!hasReset && startParam !== "reset") return;
-    (async () => {
-      try { await supabase.auth.signOut(); } catch {}
-      try { localStorage.clear(); } catch {}
-      try { sessionStorage.clear(); } catch {}
-      url.searchParams.delete("reset");
-      window.location.replace(url.pathname + (url.search ? url.search : "") + url.hash);
-    })();
+    if (!hasReset && tg?.initDataUnsafe?.start_param !== "reset") return;
+    clearTokens();
+    try { localStorage.clear(); } catch {}
+    try { sessionStorage.clear(); } catch {}
+    url.searchParams.delete("reset");
+    window.location.replace(url.pathname + (url.search || "") + url.hash);
   }, []);
 
-  // Detect account switch inside Telegram: if a Supabase session exists but
-  // the current Telegram initData user doesn't match, sign out so the new
-  // account can authenticate fresh.
+  // Account switch detection inside Telegram Mini App
   useEffect(() => {
-    if (loading || !tgReady || tgAuthing) return;
+    if (loading || !tgReady || tgAuthing || !user) return;
     const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
     const initData: string | undefined = tg?.initData;
-    if (!user || !initData) return;
+    if (!initData) return;
     try {
       const params = new URLSearchParams(initData);
-      const tgUserRaw = params.get("user");
-      const tgUser = tgUserRaw ? JSON.parse(tgUserRaw) : null;
+      const tgUser = params.get("user") ? JSON.parse(params.get("user")!) : null;
       const tgId = tgUser?.id ? Number(tgUser.id) : null;
-      if (!tgId) return;
-      const meta: any = (user as any).user_metadata ?? {};
-      const sessionTgId = meta.telegram_id ? Number(meta.telegram_id) : null;
-      const email: string = (user as any).email ?? "";
-      const emailTgId = (() => {
-        const m = email.match(/^tg(\d+)@telegram\.local$/);
-        return m ? Number(m[1]) : null;
-      })();
-      const knownTgId = sessionTgId ?? emailTgId;
-      if (knownTgId && knownTgId !== tgId) {
-        // Account switch detected — sign out and let the auth effect re-run.
-        // Account switch — clear all caches and sign out, then reload.
-        (async () => {
-          try { await supabase.auth.signOut(); } catch {}
-          try { localStorage.clear(); } catch {}
-          try { sessionStorage.clear(); } catch {}
-          window.location.reload();
-        })();
+      if (!tgId || !user.telegram_id) return;
+      if (Number(user.telegram_id) !== tgId) {
+        // Different Telegram user — clear session and re-authenticate
+        clearTokens();
+        try { localStorage.clear(); } catch {}
+        try { sessionStorage.clear(); } catch {}
+        window.location.reload();
       }
     } catch {}
   }, [loading, user, tgReady, tgAuthing]);
@@ -101,30 +83,17 @@ function DashboardLayout() {
     tg.expand?.();
     (async () => {
       try {
-        const res = await fetch("/api/public/telegram/miniapp-auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ initData }),
-        });
-        const json = await res.json();
-        if (!res.ok) {
-          if (json?.error === "not_registered") {
-            setTgError({ kind: "not_registered", message: json.message ?? "Siz hech qaysi oilada a'zo emassiz." });
-            return;
-          }
-          if (json?.error === "pending") {
-            setTgError({ kind: "pending", message: json.message ?? "So'rov admin tasdig'ini kutmoqda." });
-            return;
-          }
-          throw new Error(json?.message ?? json?.error ?? `Login xatosi (${res.status})`);
+        await miniAppAuth(initData);
+        // onAuthChange in useAuth will reload the user automatically
+      } catch (err: any) {
+        const msg: string = err?.message ?? "";
+        if (msg.includes("not_registered")) {
+          setTgError({ kind: "not_registered", message: "Siz hech qaysi oilada a'zo emassiz." });
+        } else if (msg.includes("pending")) {
+          setTgError({ kind: "pending", message: "So'rov admin tasdig'ini kutmoqda." });
+        } else {
+          setTgError({ kind: "other", message: msg || "Telegram orqali kirish amalga oshmadi" });
         }
-        const { error } = await supabase.auth.verifyOtp({
-          type: "magiclink",
-          token_hash: json.token_hash,
-        });
-        if (error) throw error;
-      } catch (e: any) {
-        setTgError({ kind: "other", message: e?.message ?? "Telegram orqali kirish amalga oshmadi" });
       } finally {
         setTgAuthing(false);
       }
@@ -133,7 +102,7 @@ function DashboardLayout() {
 
   useEffect(() => {
     if (loading || tgAuthing || !tgReady) return;
-    if (!user && !tgError) {
+    if (!user && !tgError && !isAuthenticated()) {
       const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
       if (!tg?.initData) navigate({ to: "/login" });
     }
@@ -146,14 +115,7 @@ function DashboardLayout() {
     setInviting(true);
     try {
       const tg = (typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null);
-      const initData = tg?.initData;
-      const res = await fetch("/api/public/telegram/miniapp-register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData, invite_code: code }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? json?.error ?? `Xato (${res.status})`);
+      await miniAppRegister(tg?.initData ?? "", code);
       toast.success("So'rov yuborildi! Admin tasdiqlashidan keyin qayta kirib ko'ring.");
       setTgError({ kind: "pending", message: "So'rovingiz adminga yuborildi. Tasdiqlangach mini-app'ga kira olasiz." });
     } catch (err: any) {
@@ -163,8 +125,7 @@ function DashboardLayout() {
     }
   };
 
-
-  // Redirect non-admins away from admin-only pages
+  // Redirect non-admins away from restricted pages
   useEffect(() => {
     if (!user || roleLoading) return;
     if (!isSuperadmin && SUPERADMIN_ONLY_PATHS.some(p => location.pathname.startsWith(p))) {

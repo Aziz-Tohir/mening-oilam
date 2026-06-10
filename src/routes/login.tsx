@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { isAuthenticated, login, register } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +16,7 @@ export const Route = createFileRoute("/login")({
       { name: "description", content: "Shajara admin paneliga kiring yoki ro'yxatdan o'ting va oilaviy guruhingizni Telegram orqali boshqaring." },
       { property: "og:title", content: "Kirish — Shajara Admin" },
       { property: "og:description", content: "Shajara admin paneliga kirish va ro'yxatdan o'tish sahifasi." },
-      { property: "og:url", content: "https://mening-oilam.lovable.app/login" },
       { name: "robots", content: "noindex,follow" },
-    ],
-    links: [
-      { rel: "canonical", href: "https://mening-oilam.lovable.app/login" },
     ],
   }),
   component: LoginPage,
@@ -33,32 +29,35 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard" });
-    });
+    if (isAuthenticated()) navigate({ to: "/dashboard" });
   }, [navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else navigate({ to: "/dashboard" });
+    try {
+      await login(email, password);
+      navigate({ to: "/dashboard" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Kirish amalga oshmadi");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email, password,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
-    });
-    setLoading(false);
-    if (error) toast.error(error.message);
-    else toast.success("Akkount yaratildi! Email tasdiqlash kerak bo'lsa, pochtangizni tekshiring.");
+    try {
+      await register(email, password);
+      toast.success("Akkount yaratildi! Kirish amalga oshdi.");
+      navigate({ to: "/dashboard" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Ro'yxatdan o'tish amalga oshmadi");
+    } finally {
+      setLoading(false);
+    }
   };
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4">
